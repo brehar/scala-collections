@@ -93,7 +93,7 @@ class SetTest extends FunSuite with Matchers {
 
     first should not be second
 
-    val emptySet = Set.empty
+    val emptySet = Set.empty[String]
     val nonEmptySet = Set(first, second)
 
     emptySet.union(nonEmptySet)(first) shouldBe true
@@ -117,7 +117,7 @@ class SetTest extends FunSuite with Matchers {
   }
 
   test("intersection on empty Set should yield an empty Set") {
-    Set.empty.intersection(Set.empty)(randomString) shouldBe false
+    Set.empty.intersection(Set.empty[String])(randomString) shouldBe false
   }
 
   test("intersection on a non-empty Set with an empty Set should yield an empty Set") {
@@ -126,7 +126,7 @@ class SetTest extends FunSuite with Matchers {
 
     first should not be second
 
-    val emptySet = Set.empty
+    val emptySet = Set.empty[String]
     val nonEmptySet = Set(first, second)
 
     emptySet.intersection(nonEmptySet)(first) shouldBe false
@@ -150,7 +150,7 @@ class SetTest extends FunSuite with Matchers {
   }
 
   test("difference on empty Set should yield an empty Set") {
-    Set.empty.difference(Set.empty)(randomString) shouldBe false
+    Set.empty.difference(Set.empty[String])(randomString) shouldBe false
   }
 
   test("difference on a non-empty Set with an empty Set should yield an empty Set") {
@@ -159,7 +159,7 @@ class SetTest extends FunSuite with Matchers {
 
     first should not be second
 
-    val emptySet = Set.empty
+    val emptySet = Set.empty[String]
     val nonEmptySet = Set(first, second)
 
     emptySet.difference(nonEmptySet)(first) shouldBe false
@@ -310,8 +310,21 @@ class SetTest extends FunSuite with Matchers {
     Set(a, b).sample should contain oneOf (a, b)
   }
 
+  test("Set() should not compile") {
+    "Set()" shouldNot compile
+  }
+
+  test(
+    "calling the varargs apply method on the Set companion object should yield a Set with all the arguments as elements") {
+      val a = randomString
+      val b = randomString
+      val c = randomString
+
+      Set(a, b, c) shouldBe Set.empty.add(a).add(b).add(c)
+    }
+
   test("foreach on an empty Set should not apply the function") {
-    noException should be thrownBy Set.empty.foreach(_ => sys.error("should not be thrown"))
+    noException should be thrownBy Set.empty[String].foreach(_ => sys.error("should not be thrown"))
   }
 
   test("foreach on a non-empty Set should apply the function") {
@@ -368,18 +381,35 @@ class SetTest extends FunSuite with Matchers {
     size shouldBe set.size
   }
 
-  test("Set() should not compile") {
-    "Set()" shouldNot compile
+  test("foreach should be parameterized in the result of the argument function so that it does not produce warnings") {
+    Set.empty[String].foreach(_ => 1)
   }
 
-  test(
-    "calling the varargs apply method on the Set companion object should yield a Set with all the arguments as elements") {
-      val a = randomString
-      val b = randomString
-      val c = randomString
+  test("map on an empty Set should not apply the function") {
+    noException should be thrownBy Set.empty[String].map(_ => sys.error("should not be thrown"))
+  }
 
-      Set(a, b, c) shouldBe Set.empty.add(a).add(b).add(c)
+  test("map should produce a Set") {
+    Set("hello", "world").map(_.reverse) shouldBe Set("dlrow", "olleh")
+  }
+
+  test("map should be able to produce a Set of something other than String") {
+    Set("hello", "world").map(_.length) shouldBe Set(5)
+    Set("hello", "planet").map(_.length) shouldBe Set(5, 6)
+  }
+
+  test("flatMap should be able to produce a chess board") {
+    val characters = Set('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h')
+    val numbers = Set(1, 2, 3, 4, 5, 6, 7, 8)
+
+    val chessBoard: Set[(Char, Int)] = characters.flatMap { c =>
+      numbers.map { n =>
+        c -> n
+      }
     }
+
+    chessBoard.size shouldBe 64
+  }
 
   private def randomString: String = scala.util.Random.alphanumeric.take(5).mkString
 }
