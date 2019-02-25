@@ -64,10 +64,8 @@ sealed trait Set[E] extends (E => Boolean) {
 
   final def map[R](function: E => R): Set[R] = fold(empty[R])(_ add function(_))
 
-  final def flatMap[R](function: E => Set[R]): Set[R] = fold(empty[R]) { (outerAcc, outerCurrent) =>
-    function(outerCurrent).fold(outerAcc) { (innerAcc, innerCurrent) =>
-      innerAcc.add(innerCurrent)
-    }
+  final def flatMap[R](function: E => Set[R]): Set[R] = fold(empty[R]) { (acc, current) =>
+    function(current).fold(acc)(_ add _)
   }
 }
 
