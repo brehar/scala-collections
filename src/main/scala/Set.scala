@@ -1,75 +1,31 @@
 sealed trait Set[E] extends (E => Boolean) {
   import Set.{ Cons, Empty, empty }
 
-  final override def apply(input: E): Boolean = {
-    var result = false
+  final override def apply(input: E): Boolean = fold(false)(_ || _ == input)
 
-    foreach { current =>
-      result = result || current == input
-    }
-
-    result
+  final def add(input: E): Set[E] = fold(Cons(input, empty)) { (acc, current) =>
+    if (current == input) acc
+    else Cons(current, acc)
   }
 
-  final def add(input: E): Set[E] = {
-    var result = Cons(input, empty)
-
-    foreach { current =>
-      if (current != input) result = Cons(current, result)
-    }
-
-    result
+  final def remove(input: E): Set[E] = fold(empty[E]) { (acc, current) =>
+    if (current == input) acc
+    else Cons(current, acc)
   }
 
-  final def remove(input: E): Set[E] = {
-    var result = empty[E]
+  final def union(that: Set[E]): Set[E] = fold(that)(_ add _)
 
-    foreach { current =>
-      if (current != input) result = Cons(current, result)
-    }
-
-    result
+  final def intersection(that: Set[E]): Set[E] = fold(empty[E]) { (acc, current) =>
+    if (that(current)) acc.add(current)
+    else acc
   }
 
-  final def union(that: Set[E]): Set[E] = {
-    var result = that
-
-    foreach { current =>
-      result = result.add(current)
-    }
-
-    result
+  final def difference(that: Set[E]): Set[E] = fold(empty[E]) { (acc, current) =>
+    if (that(current)) acc
+    else acc.add(current)
   }
 
-  final def intersection(that: Set[E]): Set[E] = {
-    var result = empty[E]
-
-    foreach { current =>
-      if (that(current)) result = result.add(current)
-    }
-
-    result
-  }
-
-  final def difference(that: Set[E]): Set[E] = {
-    var result = empty[E]
-
-    foreach { current =>
-      if (!that(current)) result = result.add(current)
-    }
-
-    result
-  }
-
-  final def isSubsetOf(that: Set[E]): Boolean = {
-    var result = true
-
-    foreach { current =>
-      result = result && that(current)
-    }
-
-    result
-  }
+  final def isSubsetOf(that: Set[E]): Boolean = fold(true)(_ && that(_))
 
   final def isSupersetOf(that: Set[E]): Boolean = that.isSubsetOf(this)
 
@@ -78,23 +34,9 @@ sealed trait Set[E] extends (E => Boolean) {
     case _ => false
   }
 
-  final override def hashCode: Int =
-    if (isEmpty) 42
-    else {
-      val cons = this.asInstanceOf[Cons[E]]
+  final override def hashCode: Int = fold(42)(_ + _.hashCode())
 
-      cons.element.hashCode + cons.otherElements.hashCode
-    }
-
-  final def size: Int = {
-    var result = 0
-
-    foreach { _ =>
-      result += 1
-    }
-
-    result
-  }
+  final def size: Int = fold(0) { (acc, _) => acc + 1 }
 
   final def isEmpty: Boolean = this.isInstanceOf[Empty[E]]
 
@@ -102,50 +44,30 @@ sealed trait Set[E] extends (E => Boolean) {
 
   def isSingleton: Boolean =
     if (isEmpty) false
-    else {
-      val cons = this.asInstanceOf[Cons[E]]
-
-      cons.otherElements.isEmpty
-    }
+    else this.asInstanceOf[Cons[E]].otherElements.isEmpty
 
   def sample: Option[E] =
     if (isEmpty) None
+    else Some(this.asInstanceOf[Cons[E]].element)
+
+  @scala.annotation.tailrec
+  final def fold[R](seed: R)(function: (R, E) => R): R = {
+    if (isEmpty) seed
     else {
       val cons = this.asInstanceOf[Cons[E]]
 
-      Some(cons.element)
-    }
-
-  @scala.annotation.tailrec
-  final def foreach[R](function: E => R): Unit = {
-    if (nonEmpty) {
-      val cons = this.asInstanceOf[Cons[E]]
-
-      function(cons.element)
-      cons.otherElements.foreach(function)
+      cons.otherElements.fold(function(seed, cons.element))(function)
     }
   }
 
-  final def map[R](function: E => R): Set[R] = {
-    var result = empty[R]
+  final def foreach[R](function: E => R): Unit = fold(()) { (_, current) => function(current) }
 
-    foreach { current =>
-      result = result.add(function(current))
+  final def map[R](function: E => R): Set[R] = fold(empty[R])(_ add function(_))
+
+  final def flatMap[R](function: E => Set[R]): Set[R] = fold(empty[R]) { (outerAcc, outerCurrent) =>
+    function(outerCurrent).fold(outerAcc) { (innerAcc, innerCurrent) =>
+      innerAcc.add(innerCurrent)
     }
-
-    result
-  }
-
-  final def flatMap[R](function: E => Set[R]): Set[R] = {
-    var result = empty[R]
-
-    foreach { outerCurrent =>
-      function(outerCurrent).foreach { innerCurrent =>
-        result = result.add(innerCurrent)
-      }
-    }
-
-    result
   }
 }
 
