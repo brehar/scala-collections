@@ -381,9 +381,10 @@ class SetTest extends FunSuite with Matchers {
     size shouldBe set.size
   }
 
-  test("foreach should be parameterized in the result of the argument function so that it does not produce warnings") {
-    Set.empty[String].foreach(_ => 1)
-  }
+  test(
+    "foreach should be parameterized in the result of the argument function so that it does not produce warnings") {
+      Set.empty[String].foreach(_ => 1)
+    }
 
   test("map on an empty Set should not apply the function") {
     noException should be thrownBy Set.empty[String].map(_ => sys.error("should not be thrown"))

@@ -36,7 +36,9 @@ sealed trait Set[E] extends (E => Boolean) {
 
   final override def hashCode: Int = fold(42)(_ + _.hashCode())
 
-  final def size: Int = fold(0) { (acc, _) => acc + 1 }
+  final def size: Int = fold(0) { (acc, _) =>
+    acc + 1
+  }
 
   final def isEmpty: Boolean = this.isInstanceOf[Empty[E]]
 
@@ -60,7 +62,9 @@ sealed trait Set[E] extends (E => Boolean) {
     }
   }
 
-  final def foreach[R](function: E => R): Unit = fold(()) { (_, current) => function(current) }
+  final def foreach[R](function: E => R): Unit = fold(()) { (_, current) =>
+    function(current)
+  }
 
   final def map[R](function: E => R): Set[R] = fold(empty[R])(_ add function(_))
 
@@ -70,15 +74,8 @@ sealed trait Set[E] extends (E => Boolean) {
 }
 
 object Set {
-  def apply[E](element: E, otherElements: E*): Set[E] = {
-    var result: Set[E] = empty[E].add(element)
-
-    otherElements.foreach { current =>
-      result = result.add(current)
-    }
-
-    result
-  }
+  def apply[E](element: E, otherElements: E*): Set[E] =
+    otherElements.foldLeft(empty[E].add(element))(_ add _)
 
   private final case class Cons[E](element: E, otherElements: Set[E]) extends Set[E]
 
