@@ -1,11 +1,11 @@
-sealed trait Set[E] extends (E => Boolean) {
-  import Set.{ Cons, Empty, empty }
+sealed trait Set[+E] {
+  import Set.{ Cons, empty }
 
-  final override def apply(input: E): Boolean = contains(input)
+  final def apply[S >: E](input: S): Boolean = contains(input)
 
-  final def doesNotContain(input: E): Boolean = !contains(input)
+  final def doesNotContain[S >: E](input: S): Boolean = !contains(input)
 
-  final def contains(input: E): Boolean = exists(_ == input)
+  final def contains[S >: E](input: S): Boolean = exists(_ == input)
 
   final def doesNotExist(predicate: E => Boolean): Boolean = !exists(predicate)
 
@@ -15,33 +15,33 @@ sealed trait Set[E] extends (E => Boolean) {
 
   final def forall(predicate: E => Boolean): Boolean = fold(true)(_ && predicate(_))
 
-  final def add(input: E): Set[E] = fold(Cons(input, empty)) { (acc, current) =>
+  final def add[S >: E](input: S): Set[S] = fold(Cons(input, empty)) { (acc, current) =>
     if (current == input) acc
     else Cons(current, acc)
   }
 
-  final def remove(input: E): Set[E] = fold(empty[E]) { (acc, current) =>
+  final def remove[S >: E](input: S): Set[S] = fold[Set[S]](empty) { (acc, current) =>
     if (current == input) acc
     else Cons(current, acc)
   }
 
-  final def union(that: Set[E]): Set[E] = fold(that)(_ add _)
+  final def union[S >: E](that: Set[S]): Set[S] = fold(that)(_ add _)
 
-  final def intersection(that: Set[E]): Set[E] = filter(that)
+  final def intersection[S >: E](that: Set[S]): Set[S] = filter(that)
 
-  final def filter(predicate: E => Boolean): Set[E] = fold(empty[E]) { (acc, current) =>
+  final def filter(predicate: E => Boolean): Set[E] = fold[Set[E]](empty) { (acc, current) =>
     if (predicate(current)) acc.add(current)
     else acc
   }
 
-  final def difference(that: Set[E]): Set[E] = fold(empty[E]) { (acc, current) =>
-    if (that(current)) acc
+  final def difference(predicate: E => Boolean): Set[E] = fold[Set[E]](empty) { (acc, current) =>
+    if (predicate(current)) acc
     else acc.add(current)
   }
 
-  final def isSubsetOf(that: Set[E]): Boolean = forall(that)
+  final def isSubsetOf[S >: E](that: Set[S]): Boolean = forall(that)
 
-  final def isSupersetOf(that: Set[E]): Boolean = that.isSubsetOf(this)
+  final def isSupersetOf[S >: E](that: Set[S]): Boolean = that.isSubsetOf(this)
 
   final override def equals(other: Any): Boolean = other match {
     case that: Set[E] => this.isSubsetOf(that) && that.isSubsetOf(this)
@@ -65,7 +65,7 @@ sealed trait Set[E] extends (E => Boolean) {
     acc + 1
   }
 
-  final def isEmpty: Boolean = this.isInstanceOf[Empty[E]]
+  final def isEmpty: Boolean = this eq empty
 
   final def nonEmpty: Boolean = !isEmpty
 
@@ -85,9 +85,9 @@ sealed trait Set[E] extends (E => Boolean) {
     function(current)
   }
 
-  final def map[R](function: E => R): Set[R] = fold(empty[R])(_ add function(_))
+  final def map[R](function: E => R): Set[R] = fold[Set[R]](empty)(_ add function(_))
 
-  final def flatMap[R](function: E => Set[R]): Set[R] = fold(empty[R]) { (acc, current) =>
+  final def flatMap[R](function: E => Set[R]): Set[R] = fold[Set[R]](empty) { (acc, current) =>
     function(current).fold(acc)(_ add _)
   }
 
@@ -100,7 +100,7 @@ sealed trait Set[E] extends (E => Boolean) {
 
 object Set {
   def apply[E](element: E, otherElements: E*): Set[E] =
-    otherElements.foldLeft(empty[E].add(element))(_ add _)
+    otherElements.foldLeft[Set[E]](empty.add(element))(_ add _)
 
   private final case class Cons[E](element: E, otherElements: Set[E]) extends Set[E]
 
@@ -108,7 +108,7 @@ object Set {
     private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
   }
 
-  private class Empty[E] extends Set[E] {
+  private object Empty extends Set[Nothing] {
     private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
   }
 
@@ -117,5 +117,7 @@ object Set {
   private[this] def patternMatchingNotSupported: Nothing =
     sys.error("Pattern matching on Sets is expensive and therefore not supported.")
 
-  def empty[E]: Set[E] = new Empty[E]
+  def empty: Set[Nothing] = Empty
+
+  implicit def setCanBeUsedAsFunction1[E](set: Set[E]): E => Boolean = set.apply
 }
