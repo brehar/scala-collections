@@ -1,3 +1,5 @@
+package collections
+
 sealed trait Set[+E] extends FoldableFactory[E, Set] {
   import Set.{ Cons, empty }
 

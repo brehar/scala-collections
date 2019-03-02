@@ -1,3 +1,5 @@
+package collections
+
 trait FoldableFactory[+E, A[+L] <: FoldableFactory[L, A]] extends Foldable[E] {
   protected def factory: Factory[A]
 

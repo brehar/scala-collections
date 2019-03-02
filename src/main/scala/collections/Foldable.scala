@@ -1,3 +1,5 @@
+package collections
+
 trait Foldable[+E] {
   def fold[R](seed: R)(function: (R, E) => R): R
 
