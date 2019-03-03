@@ -85,6 +85,11 @@ class SetTest extends FunSuite with Matchers {
     set(element) shouldBe false
   }
 
+  test("remove should remove elements from both sides of the tree") {
+    Set(1, 2, 3).remove(3) shouldBe Set(1, 2)
+    Set(1, -2, -3).remove(-3) shouldBe Set(1, -2)
+  }
+
   test("union on an empty collections.Set should yield an empty collections.Set") {
     Set.empty.union(Set.empty) shouldBe Set.empty
   }
@@ -608,6 +613,10 @@ class SetTest extends FunSuite with Matchers {
     actual should include(second)
     actual should include(third)
     actual.count(_ == '}') shouldBe 1
+  }
+
+  test("toString should not produce any commas with leading spaces") {
+    Set(1, 0).toString should not include " ,"
   }
 
   private def bothRoles: (Employee, Consultant) = randomEmployee -> randomConsultant

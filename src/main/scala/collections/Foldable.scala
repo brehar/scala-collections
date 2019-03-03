@@ -9,7 +9,7 @@ trait Foldable[+E] {
 
   final def doesNotContain[S >: E](input: S): Boolean = !contains(input)
 
-  final def contains[S >: E](input: S): Boolean = exists(_ == input)
+  def contains[S >: E](input: S): Boolean = exists(_ == input)
 
   final def doesNotExist(predicate: E => Boolean): Boolean = !exists(predicate)
 
