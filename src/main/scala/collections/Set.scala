@@ -68,6 +68,34 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
   def isSingleton: Boolean
 
   def sample: Option[E]
+
+  final def rendered: String = {
+    def leftOrRight(isLeft: Boolean, isFirst: Boolean): String =
+      if (isFirst) ""
+      else if (isLeft) "└── "
+      else "├── "
+
+    def leftOrRightParent(isLeft: Boolean, isFirst: Boolean): String =
+      if (isFirst) ""
+      else if (isLeft) "    "
+      else "|   "
+
+    def loop(prefix: String, isLeft: Boolean, isFirst: Boolean, set: Set[E]): String = set match {
+      case Empty() => ""
+      case Cons(left, element, right) =>
+        prefix + leftOrRight(isLeft, isFirst) + element + "\n" + loop(
+          prefix + leftOrRightParent(isLeft, isFirst),
+          isLeft = false,
+          isFirst = false,
+          right) + loop(
+            prefix + leftOrRightParent(isLeft, isFirst),
+            isLeft = true,
+            isFirst = false,
+            left)
+    }
+
+    loop("", isLeft = true, isFirst = true, this)
+  }
 }
 
 object Set extends Factory[Set] {
