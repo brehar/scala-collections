@@ -75,17 +75,25 @@ object Set extends Factory[Set] {
   private final case class Cons[E](element: E, otherElements: Set[E]) extends Set[E]
 
   private object Cons {
+    // $COVERAGE-OFF$
     private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
+    // $COVERAGE-ON$
   }
 
   private object Empty extends Set[Nothing] {
+    // $COVERAGE-OFF$
     private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
+    // $COVERAGE-ON$
   }
 
+  // $COVERAGE-OFF$
   private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
+  // $COVERAGE-ON$
 
+  // $COVERAGE-OFF$
   private[this] def patternMatchingNotSupported: Nothing =
     sys.error("Pattern matching on Sets is expensive and therefore not supported.")
+  // $COVERAGE-ON$
 
   final def empty: Set[Nothing] = Empty
 

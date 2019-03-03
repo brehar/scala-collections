@@ -129,6 +129,8 @@ class SetTest extends FunSuite with Matchers {
     Set.empty.intersection(Set.empty) shouldBe Set.empty
     Set.empty.filter(Set.empty) shouldBe Set.empty
     Set.empty.filter(_ => false) shouldBe Set.empty
+    Set.empty.filterNot(Set.empty) shouldBe Set.empty
+    Set.empty.filterNot(_ => false) shouldBe Set.empty
   }
 
   test("intersection on a non-empty collections.Set with an empty collections.Set should yield an empty collections.Set") {
@@ -142,9 +144,17 @@ class SetTest extends FunSuite with Matchers {
 
     emptySet.intersection(nonEmptySet)(first) shouldBe false
     emptySet.intersection(nonEmptySet)(second) shouldBe false
+    emptySet.filter(nonEmptySet)(first) shouldBe false
+    emptySet.filter(nonEmptySet)(second) shouldBe false
+    emptySet.filterNot(nonEmptySet)(first) shouldBe false
+    emptySet.filterNot(nonEmptySet)(second) shouldBe false
 
-    emptySet.intersection(emptySet)(first) shouldBe false
-    emptySet.intersection(emptySet)(second) shouldBe false
+    nonEmptySet.intersection(emptySet)(first) shouldBe false
+    nonEmptySet.intersection(emptySet)(second) shouldBe false
+    nonEmptySet.filter(emptySet)(first) shouldBe false
+    nonEmptySet.filter(emptySet)(second) shouldBe false
+    nonEmptySet.filterNot(emptySet)(first) shouldBe true
+    nonEmptySet.filterNot(emptySet)(second) shouldBe true
   }
 
   test("intersection on two non-empty Sets should yield their intersection") {
