@@ -9,38 +9,36 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
 
   @scala.annotation.tailrec
   final override def contains[S >: E](input: S): Boolean = this match {
-    case _: Empty.type => false
-    case cons: Cons[E] =>
-      if (input == cons.element) true
-      else if (input.hashCode() <= cons.element.hashCode()) cons.left.contains(input)
-      else cons.right.contains(input)
+    case Empty() => false
+    case Cons(left, element, right) =>
+      if (input == element) true
+      else if (input.hashCode() <= element.hashCode()) left.contains(input)
+      else right.contains(input)
   }
 
   final def fold[R](seed: R)(function: (R, E) => R): R = this match {
-    case _: Empty.type => seed
-    case cons: Cons[E] =>
-      val currentResult = function(seed, cons.element)
-      val rightResult = cons.right.fold(currentResult)(function)
+    case Empty() => seed
+    case Cons(left, element, right) =>
+      val currentResult = function(seed, element)
+      val rightResult = right.fold(currentResult)(function)
 
-      cons.left.fold(rightResult)(function)
+      left.fold(rightResult)(function)
   }
 
   final def add[S >: E](input: S): Set[S] = this match {
-    case _: Empty.type => Cons(empty, input, empty)
-    case cons: Cons[E] =>
-      if (input == cons.element) cons
-      else if (input.hashCode() <= cons.element.hashCode())
-        Cons(cons.left.add(input), cons.element, cons.right)
-      else Cons(cons.left, cons.element, cons.right.add(input))
+    case Empty() => Cons(empty, input, empty)
+    case Cons(left, element, right) =>
+      if (input == element) this
+      else if (input.hashCode() <= element.hashCode()) Cons(left.add(input), element, right)
+      else Cons(left, element, right.add(input))
   }
 
   final def remove[S >: E](input: S): Set[S] = this match {
-    case _: Empty.type => empty
-    case cons: Cons[E] =>
-      if (input == cons.element) cons.left.union(cons.right)
-      else if (input.hashCode() <= cons.element.hashCode())
-        Cons(cons.left.remove(input), cons.element, cons.right)
-      else Cons(cons.left, cons.element, cons.right.remove(input))
+    case Empty() => empty
+    case Cons(left, element, right) =>
+      if (input == element) left.union(right)
+      else if (input.hashCode() <= element.hashCode()) Cons(left.remove(input), element, right)
+      else Cons(left, element, right.remove(input))
   }
 
   final def union[S >: E](that: Set[S]): Set[S] = fold(that)(_ add _)
@@ -86,32 +84,15 @@ object Set extends Factory[Set] {
     }
   }
 
-  private object Cons {
-    // $COVERAGE-OFF$
-    private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
-    // $COVERAGE-ON$
-  }
-
   private object Empty extends Set[Nothing] {
+    def unapply[E](set: Set[E]): Boolean = set.isInstanceOf[Empty.type]
+
     final def isSingleton: Boolean = false
 
     final def sample: Option[Nothing] = None
 
     final override def toString: String = "{}"
-
-    // $COVERAGE-OFF$
-    private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
-    // $COVERAGE-ON$
   }
-
-  // $COVERAGE-OFF$
-  private[this] def unapply(any: Any): Option[(String, Any)] = patternMatchingNotSupported
-  // $COVERAGE-ON$
-
-  // $COVERAGE-OFF$
-  private[this] def patternMatchingNotSupported: Nothing =
-    sys.error("Pattern matching on Sets is expensive and therefore not supported.")
-  // $COVERAGE-ON$
 
   final def empty: Set[Nothing] = Empty
 
