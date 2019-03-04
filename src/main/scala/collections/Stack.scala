@@ -3,8 +3,6 @@ package collections
 sealed abstract class Stack[+E] {
   import Stack.{ Cons, Empty, empty }
 
-  final def `onTopOf:`[S >: E](input: S): Stack[S] = push(input)
-
   final def push[S >: E](input: S): Stack[S] = Cons(input, this)
 
   final lazy val (peek, pop) = popElement

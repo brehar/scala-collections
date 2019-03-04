@@ -3,12 +3,12 @@ package collections
 import org.scalatest.{ FunSuite, Matchers }
 
 class SetTest extends FunSuite with Matchers {
-  test("apply on an empty collections.Set should yield false") {
+  test("apply on an empty Set should yield false") {
     Set.empty(randomString) shouldBe false
     Set.empty.size shouldBe 0
   }
 
-  test("add on an empty collections.Set should yield a new collections.Set with one element") {
+  test("add on an empty Set should yield a new Set with one element") {
     val first = randomString
     val second = randomString
 
@@ -20,7 +20,7 @@ class SetTest extends FunSuite with Matchers {
     set(second) shouldBe false
   }
 
-  test("add on a non-empty collections.Set should yield a new collections.Set with two elements") {
+  test("add on a non-empty Set should yield a new Set with two elements") {
     val first = randomString
     val second = randomString
 
@@ -32,14 +32,27 @@ class SetTest extends FunSuite with Matchers {
     set(second) shouldBe true
   }
 
-  test("remove on an empty collections.Set should yield an empty collections.Set") {
+  test("adding the same element twice should simply ignore the input") {
+    val first = randomString
+    val second = randomString
+
+    first should not be second
+
+    Set(first, second, second) shouldBe Set(first, second)
+    Set(first, second, second).size shouldBe 2
+
+    Set(first, second, first) shouldBe Set(first, second)
+    Set(first, second, first).size shouldBe 2
+  }
+
+  test("remove on an empty Set should yield an empty Set") {
     val element = randomString
     val stillEmpty = Set.empty.remove(element)
 
     stillEmpty(element) shouldBe false
   }
 
-  test("remove on a non-empty collections.Set should yield a new collections.Set without the removed element") {
+  test("remove on a non-empty Set should yield a new Set without the removed element") {
     val element = randomString
     val setWithElement = Set(element)
 
@@ -90,11 +103,11 @@ class SetTest extends FunSuite with Matchers {
     Set(1, -2, -3).remove(-3) shouldBe Set(1, -2)
   }
 
-  test("union on an empty collections.Set should yield an empty collections.Set") {
+  test("union on an empty Set should yield an empty Set") {
     Set.empty.union(Set.empty) shouldBe Set.empty
   }
 
-  test("union on a non-empty collections.Set with an empty collections.Set should yield the original collections.Set untouched") {
+  test("union on a non-empty Set with an empty Set should yield the original Set untouched") {
     val first = randomString
     val second = randomString
 
@@ -130,7 +143,7 @@ class SetTest extends FunSuite with Matchers {
     Set(employee).union(Set(consultant)) shouldBe Set(employee, consultant)
   }
 
-  test("intersection on empty collections.Set should yield an empty collections.Set") {
+  test("intersection on empty Set should yield an empty Set") {
     Set.empty.intersection(Set.empty) shouldBe Set.empty
     Set.empty.filter(Set.empty) shouldBe Set.empty
     Set.empty.filter(_ => false) shouldBe Set.empty
@@ -138,7 +151,7 @@ class SetTest extends FunSuite with Matchers {
     Set.empty.filterNot(_ => false) shouldBe Set.empty
   }
 
-  test("intersection on a non-empty collections.Set with an empty collections.Set should yield an empty collections.Set") {
+  test("intersection on a non-empty Set with an empty Set should yield an empty Set") {
     val first = randomString
     val second = randomString
 
@@ -175,11 +188,11 @@ class SetTest extends FunSuite with Matchers {
     right.intersection(left) shouldBe Set(b, c)
   }
 
-  test("difference on empty collections.Set should yield an empty collections.Set") {
+  test("difference on empty Set should yield an empty Set") {
     Set.empty.difference(Set.empty) shouldBe Set.empty
   }
 
-  test("difference on a non-empty collections.Set with an empty collections.Set should yield an empty collections.Set") {
+  test("difference on a non-empty Set with an empty Set should yield an empty Set") {
     val first = randomString
     val second = randomString
 
@@ -208,7 +221,7 @@ class SetTest extends FunSuite with Matchers {
     right.difference(left) shouldBe Set(d)
   }
 
-  test("difference on two sets with different types should yield a collections.Set with the common type") {
+  test("difference on two sets with different types should yield a Set with the common type") {
     val (employee, consultant) = bothRoles
     val employeeSet = Set(employee)
     val consultantSet = Set(consultant)
@@ -217,7 +230,7 @@ class SetTest extends FunSuite with Matchers {
     consultantSet.difference(employeeSet) shouldBe consultantSet
   }
 
-  test("isSubsetOf on an empty collections.Set should yield true") {
+  test("isSubsetOf on an empty Set should yield true") {
     Set.empty.isSubsetOf(Set.empty) shouldBe true
     Set.empty.isSubsetOf(Set(randomString)) shouldBe true
   }
@@ -228,7 +241,7 @@ class SetTest extends FunSuite with Matchers {
     set.isSubsetOf(set) shouldBe true
   }
 
-  test("isSubsetOf on a non-empty collections.Set should yield false") {
+  test("isSubsetOf on a non-empty Set should yield false") {
     val a = randomString
     val b = randomString
     val c = randomString
@@ -240,7 +253,7 @@ class SetTest extends FunSuite with Matchers {
     right.isSubsetOf(left) shouldBe false
   }
 
-  test("isSupersetOf an empty collections.Set should yield true") {
+  test("isSupersetOf an empty Set should yield true") {
     Set.empty.isSupersetOf(Set.empty) shouldBe true
     Set(randomString).isSupersetOf(Set.empty) shouldBe true
   }
@@ -251,7 +264,7 @@ class SetTest extends FunSuite with Matchers {
     set.isSupersetOf(set) shouldBe true
   }
 
-  test("isSupersetOf on a non-empty collections.Set should yield false") {
+  test("isSupersetOf on a non-empty Set should yield false") {
     val a = randomString
     val b = randomString
     val c = randomString
@@ -320,7 +333,7 @@ class SetTest extends FunSuite with Matchers {
     Set(2, 1) should not be Set(1)
   }
 
-  test("hashCode on an empty collections.Set should not be random") {
+  test("hashCode on an empty Set should not be random") {
     Set.empty.hashCode() shouldBe Set.empty.hashCode()
 
     val element = randomString
@@ -328,11 +341,11 @@ class SetTest extends FunSuite with Matchers {
     Set(element).hashCode() shouldBe Set(element).hashCode()
   }
 
-  test("hashCode on an empty collections.Set should not be 0") {
+  test("hashCode on an empty Set should not be 0") {
     Set.empty.hashCode() should not be 0
   }
 
-  test("hashCode on a non-empty collections.Set should be the sum of all the hashCodes of the empty collections.Set") {
+  test("hashCode on a non-empty Set should be the sum of all the hashCodes of the empty Set") {
     val first = randomString
     val second = randomString
     val expected = Set.empty.hashCode() + first.hashCode + second.hashCode
@@ -340,15 +353,15 @@ class SetTest extends FunSuite with Matchers {
     Set(first, second).hashCode() shouldBe expected
   }
 
-  test("size on an empty collections.Set should be 0") {
+  test("size on an empty Set should be 0") {
     Set.empty.size shouldBe 0
   }
 
-  test("size on a non-empty collections.Set with 1 distinct element added should be 1") {
+  test("size on a non-empty Set with 1 distinct element added should be 1") {
     Set(randomString).size shouldBe 1
   }
 
-  test("size on a non-empty collections.Set with 2 distinct elements added should be 2") {
+  test("size on a non-empty Set with 2 distinct elements added should be 2") {
     val first = randomString
     val second = randomString
 
@@ -357,27 +370,27 @@ class SetTest extends FunSuite with Matchers {
     Set(first, second).size shouldBe 2
   }
 
-  test("size on a non-empty collections.Set with 2 equal elements added should be 1") {
+  test("size on a non-empty Set with 2 equal elements added should be 1") {
     val element = randomString
 
     Set(element, element).size shouldBe 1
   }
 
-  test("isEmpty on an empty collections.Set should yield true") {
+  test("isEmpty on an empty Set should yield true") {
     Set.empty.isEmpty shouldBe true
     Set.empty.nonEmpty shouldBe false
   }
 
-  test("isEmpty on a non-empty collections.Set should yield false") {
+  test("isEmpty on a non-empty Set should yield false") {
     Set(randomString).isEmpty shouldBe false
     Set(randomString).nonEmpty shouldBe true
   }
 
-  test("isSingleton on an empty collections.Set should yield false") {
+  test("isSingleton on an empty Set should yield false") {
     Set.empty.isSingleton shouldBe false
   }
 
-  test("isSingleton on a collections.Set with more than one element should yield false") {
+  test("isSingleton on a Set with more than one element should yield false") {
     val first = randomString
     val second = randomString
 
@@ -386,11 +399,11 @@ class SetTest extends FunSuite with Matchers {
     Set(first, second).isSingleton shouldBe false
   }
 
-  test("isSingleton on a collections.Set with a single element should yield true") {
+  test("isSingleton on a Set with a single element should yield true") {
     Set(randomString).isSingleton shouldBe true
   }
 
-  test("sample should yield a random element from the collections.Set") {
+  test("sample should yield a random element from the Set") {
     Set.empty.sample shouldBe None
 
     val a = randomString
@@ -402,12 +415,12 @@ class SetTest extends FunSuite with Matchers {
     Set(a, b).sample should contain oneOf (a, b)
   }
 
-  test("collections.Set() should not compile") {
-    "collections.Set()" shouldNot compile
+  test("Set() should not compile") {
+    "Set()" shouldNot compile
   }
 
   test(
-    "calling the varargs apply method on the collections.Set companion object should yield a collections.Set with all the arguments as elements") {
+    "calling the varargs apply method on the Set companion object should yield a Set with all the arguments as elements") {
       val a = randomString
       val b = randomString
       val c = randomString
@@ -415,11 +428,11 @@ class SetTest extends FunSuite with Matchers {
       Set(a, b, c) shouldBe Set.empty.add(a).add(b).add(c)
     }
 
-  test("foreach on an empty collections.Set should not apply the function") {
+  test("foreach on an empty Set should not apply the function") {
     noException should be thrownBy Set.empty.foreach(_ => sys.error("should not be thrown"))
   }
 
-  test("foreach on a non-empty collections.Set should apply the function") {
+  test("foreach on a non-empty Set should apply the function") {
     var functionWasApplied = false
 
     Set(randomString).foreach(_ => functionWasApplied = true)
@@ -427,7 +440,7 @@ class SetTest extends FunSuite with Matchers {
     functionWasApplied shouldBe true
   }
 
-  test("foreach should be able to calculate the size of an empty collections.Set") {
+  test("foreach should be able to calculate the size of an empty Set") {
     var size = 0
     val set = Set.empty
 
@@ -437,7 +450,7 @@ class SetTest extends FunSuite with Matchers {
     size shouldBe set.size
   }
 
-  test("foreach should be able to calculate the size of a non-empty collections.Set with 1 element") {
+  test("foreach should be able to calculate the size of a non-empty Set with 1 element") {
     var size = 0
     val set = Set(randomString)
 
@@ -447,7 +460,7 @@ class SetTest extends FunSuite with Matchers {
     size shouldBe set.size
   }
 
-  test("foreach should be able to calculate the size of a non-empty collections.Set with 2 elements") {
+  test("foreach should be able to calculate the size of a non-empty Set with 2 elements") {
     var size = 0
     val a = randomString
     val b = randomString
@@ -462,7 +475,7 @@ class SetTest extends FunSuite with Matchers {
     size shouldBe set.size
   }
 
-  test("foreach should be able to calculate the size of a non-empty collections.Set with 1 unique element") {
+  test("foreach should be able to calculate the size of a non-empty Set with 1 unique element") {
     var size = 0
     val element = randomString
     val set = Set(element, element)
@@ -478,15 +491,15 @@ class SetTest extends FunSuite with Matchers {
       Set.empty.foreach(_ => 1)
     }
 
-  test("map on an empty collections.Set should not apply the function") {
+  test("map on an empty Set should not apply the function") {
     noException should be thrownBy Set.empty.map(_ => sys.error("should not be thrown"))
   }
 
-  test("map should produce a collections.Set") {
+  test("map should produce a Set") {
     Set("hello", "world").map(_.reverse) shouldBe Set("dlrow", "olleh")
   }
 
-  test("map should be able to produce a collections.Set of something other than String") {
+  test("map should be able to produce a Set of something other than String") {
     Set("hello", "world").map(_.length) shouldBe Set(5)
     Set("hello", "planet").map(_.length) shouldBe Set(5, 6)
   }
@@ -495,7 +508,7 @@ class SetTest extends FunSuite with Matchers {
     val characters = Set('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h')
     val numbers = Set(1, 2, 3, 4, 5, 6, 7, 8)
 
-    val chessBoard: collections.Set[(Char, Int)] = characters.flatMap { c =>
+    val chessBoard: Set[(Char, Int)] = characters.flatMap { c =>
       numbers.map { n =>
         c -> n
       }
@@ -504,7 +517,7 @@ class SetTest extends FunSuite with Matchers {
     chessBoard.size shouldBe 64
   }
 
-  test("collections.Set should be a function") {
+  test("Set should be a function") {
     val orderedClassmates = Seq("alice", "bob", "frank")
 
     def isFriend(potentialFriend: String): Boolean =
@@ -518,17 +531,17 @@ class SetTest extends FunSuite with Matchers {
     orderedClassmates.filter(isFriend) shouldBe orderedClassmates.filter(friends)
   }
 
-  test("contains on an empty collections.Set should yield false") {
+  test("contains on an empty Set should yield false") {
     Set.empty.contains(randomString) shouldBe false
     Set.empty.doesNotContain(randomString) shouldBe true
   }
 
-  test("exists on an empty collections.Set should yield false") {
+  test("exists on an empty Set should yield false") {
     Set.empty.exists(_ => false) shouldBe false
     Set.empty.doesNotExist(_ => false) shouldBe true
   }
 
-  test("exists on a non-empty collections.Set should yield true") {
+  test("exists on a non-empty Set should yield true") {
     val element = randomString
 
     Set(element).exists(_.size == element.size) shouldBe true
@@ -549,7 +562,7 @@ class SetTest extends FunSuite with Matchers {
     Set[Employee](employee).exists((input: Employee) => input == employee) shouldBe true
     Set[Employee](employee).exists((input: CompanyRole) => input == employee) shouldBe true
     Set[CompanyRole](employee).exists((input: CompanyRole) => input == employee) shouldBe true
-    "collections.Set[CompanyRole](employee).exists((input: Employee) => input == employee)" shouldNot typeCheck
+    "Set[CompanyRole](employee).exists((input: Employee) => input == employee)" shouldNot typeCheck
 
     Set[Employee](employee).exists(Set[Employee](employee)) shouldBe true
     Set[Employee](employee).exists(Set[CompanyRole](employee)) shouldBe true
@@ -557,12 +570,12 @@ class SetTest extends FunSuite with Matchers {
     Set[CompanyRole](employee).exists(Set[Employee](employee)) shouldBe true
   }
 
-  test("forall on an empty collections.Set should yield false") {
+  test("forall on an empty Set should yield false") {
     Set.empty.forall(_ => false) shouldBe true
     Set.empty.notForall(_ => false) shouldBe false
   }
 
-  test("forall on a non-empty collections.Set should yield true") {
+  test("forall on a non-empty Set should yield true") {
     val element = randomString
 
     Set(element).forall(_.size == element.size) shouldBe true
@@ -572,17 +585,17 @@ class SetTest extends FunSuite with Matchers {
     Set(element).notForall(_.size != element.size) shouldBe true
   }
 
-  test("toString on an empty collections.Set should yield {}") {
+  test("toString on an empty Set should yield {}") {
     Set.empty.toString shouldBe "{}"
   }
 
-  test("toString on a collections.Set with one element should yield {oneElement}") {
+  test("toString on a Set with one element should yield {oneElement}") {
     val element = randomString
 
     Set(element).toString shouldBe s"{ $element }"
   }
 
-  test("toString on a collections.Set with two elements should yield {elementOne, elementTwo}") {
+  test("toString on a Set with two elements should yield {elementOne, elementTwo}") {
     val first = randomString
     val second = randomString
 
@@ -597,7 +610,7 @@ class SetTest extends FunSuite with Matchers {
     actual.count(_ == '}') shouldBe 1
   }
 
-  test("toString on a collections.Set with three elements should yield {elementOne, elementTwo, elementThree}") {
+  test("toString on a Set with three elements should yield {elementOne, elementTwo, elementThree}") {
     val first = randomString
     val second = randomString
     val third = randomString

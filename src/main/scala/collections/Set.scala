@@ -27,18 +27,18 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
 
   final def add[S >: E](input: S): Set[S] = this match {
     case Empty() => Cons(empty, input, empty)
-    case Cons(left, element, right) =>
+    case cons @ Cons(left, element, right) =>
       if (input == element) this
-      else if (input.hashCode() <= element.hashCode()) Cons(left.add(input), element, right)
-      else Cons(left, element, right.add(input))
+      else if (input.hashCode() <= element.hashCode()) cons.copy(left = left.add(input))
+      else cons.copy(right = right.add(input))
   }
 
   final def remove[S >: E](input: S): Set[S] = this match {
     case Empty() => empty
-    case Cons(left, element, right) =>
+    case cons @ Cons(left, element, right) =>
       if (input == element) left.union(right)
-      else if (input.hashCode() <= element.hashCode()) Cons(left.remove(input), element, right)
-      else Cons(left, element, right.remove(input))
+      else if (input.hashCode() <= element.hashCode()) cons.copy(left = left.remove(input))
+      else cons.copy(right = right.remove(input))
   }
 
   final def union[S >: E](that: Set[S]): Set[S] = fold(that)(_ add _)

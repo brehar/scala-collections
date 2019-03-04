@@ -4,8 +4,6 @@ import org.scalatest.{ FunSuite, Matchers }
 
 class TreeTest extends FunSuite with Matchers {
   test("rendered") {
-    println("-" * 50)
-
     testRendering(Set.empty)("")
 
     testRendering(Set(4)) {
