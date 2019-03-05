@@ -1,44 +1,106 @@
 package collections
 
 sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
-  import Set.{ Cons, Empty, empty }
+  import Set.{ Center, Cons, Left, Path, Right, empty }
 
   final protected def factory: Factory[Set] = Set
 
   final def apply[S >: E](input: S): Boolean = contains(input)
 
-  @scala.annotation.tailrec
-  final override def contains[S >: E](input: S): Boolean = this match {
-    case Empty() => false
-    case Cons(left, element, right) =>
-      if (input == element) true
-      else if (input.hashCode() <= element.hashCode()) left.contains(input)
-      else right.contains(input)
+  final override def contains[S >: E](input: S): Boolean = {
+    @scala.annotation.tailrec
+    def loop(stack: Stack[Set[E]]): Boolean = stack match {
+      case Stack.Empty => false
+      case Stack.Cons(set, otherSetsOnTheStack) =>
+        set match {
+          case Set.Empty() => loop(otherSetsOnTheStack)
+          case Set.Cons(left, element, right) =>
+            if (input == element) true
+            else if (input.hashCode() <= element.hashCode()) loop(otherSetsOnTheStack.push(left))
+            else loop(otherSetsOnTheStack.push(right))
+        }
+    }
+
+    loop(Stack.empty.push(this))
   }
 
-  final def fold[R](seed: R)(function: (R, E) => R): R = this match {
-    case Empty() => seed
-    case Cons(left, element, right) =>
-      val currentResult = function(seed, element)
-      val rightResult = right.fold(currentResult)(function)
+  final def fold[R](seed: R)(function: (R, E) => R): R = {
+    @scala.annotation.tailrec
+    def loop(stack: Stack[Set[E]], acc: R): R = stack match {
+      case Stack.Empty => acc
+      case Stack.Cons(set, otherSetsOnTheStack) =>
+        set match {
+          case Set.Empty() => loop(otherSetsOnTheStack, acc)
+          case Set.Cons(left, element, right) =>
+            loop(otherSetsOnTheStack.push(right).push(left), function(acc, element))
+        }
+    }
 
-      left.fold(rightResult)(function)
+    loop(Stack.empty.push(this), seed)
   }
 
-  final def add[S >: E](input: S): Set[S] = this match {
-    case Empty() => Cons(empty, input, empty)
-    case cons @ Cons(left, element, right) =>
-      if (input == element) this
-      else if (input.hashCode() <= element.hashCode()) cons.copy(left = left.add(input))
-      else cons.copy(right = right.add(input))
+  final def add[S >: E](input: S): Set[S] = {
+    def path(set: Set[E]): Path[E] = {
+      @scala.annotation.tailrec
+      def loop(set: Set[E], path: Path[E]): Path[E] = set match {
+        case Set.Empty() => path
+        case cons @ Set.Cons(left, element, right) =>
+          if (input == element) path.push(Center(cons))
+          else if (input.hashCode() <= element.hashCode()) loop(left, path.push(Left(cons)))
+          else loop(right, path.push(Right(cons)))
+      }
+
+      loop(set, Stack.empty)
+    }
+
+    def rebuild(path: Path[E]): Set[S] = {
+      @scala.annotation.tailrec
+      def loop(path: Path[E], acc: Set[S]): Set[S] = path match {
+        case Stack.Empty => acc
+        case Stack.Cons(direction, otherDirectionsOnTheStack) =>
+          loop(otherDirectionsOnTheStack, direction match {
+            case Left(cons) => cons.copy(left = acc)
+            case Center(cons) => cons
+            case Right(cons) => cons.copy(right = acc)
+          })
+      }
+
+      loop(path, Cons(empty, input, empty))
+    }
+
+    rebuild(path(this))
   }
 
-  final def remove[S >: E](input: S): Set[S] = this match {
-    case Empty() => empty
-    case cons @ Cons(left, element, right) =>
-      if (input == element) left.union(right)
-      else if (input.hashCode() <= element.hashCode()) cons.copy(left = left.remove(input))
-      else cons.copy(right = right.remove(input))
+  final def remove[S >: E](input: S): Set[S] = {
+    def path(set: Set[E]): Path[E] = {
+      @scala.annotation.tailrec
+      def loop(set: Set[E], path: Path[E]): Path[E] = set match {
+        case Set.Empty() => path
+        case cons @ Set.Cons(left, element, right) =>
+          if (input == element) path.push(Center(cons))
+          else if (input.hashCode() <= element.hashCode()) loop(left, path.push(Left(cons)))
+          else loop(right, path.push(Right(cons)))
+      }
+
+      loop(set, Stack.empty)
+    }
+
+    def rebuild(path: Path[E]): Set[S] = {
+      @scala.annotation.tailrec
+      def loop(path: Path[E], acc: Set[S]): Set[S] = path match {
+        case Stack.Empty => acc
+        case Stack.Cons(direction, otherDirectionsOnTheStack) =>
+          loop(otherDirectionsOnTheStack, direction match {
+            case Left(cons) => cons.copy(left = acc)
+            case Center(Set.Cons(left, _, right)) => left.union(right)
+            case Right(cons) => cons.copy(right = acc)
+          })
+      }
+
+      loop(path, empty)
+    }
+
+    rebuild(path(this))
   }
 
   final def union[S >: E](that: Set[S]): Set[S] = fold(that)(_ add _)
@@ -81,8 +143,8 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
       else "|   "
 
     def loop(prefix: String, isLeft: Boolean, isFirst: Boolean, set: Set[E]): String = set match {
-      case Empty() => ""
-      case Cons(left, element, right) =>
+      case Set.Empty() => ""
+      case Set.Cons(left, element, right) =>
         prefix + leftOrRight(isLeft, isFirst) + element + "\n" + loop(
           prefix + leftOrRightParent(isLeft, isFirst),
           isLeft = false,
@@ -123,6 +185,16 @@ object Set extends Factory[Set] {
   }
 
   final def empty: Set[Nothing] = Empty
+
+  private type Path[E] = Stack[Direction[E]]
+
+  private sealed trait Direction[E] extends Any
+
+  private final case class Left[E](cons: Cons[E]) extends AnyVal with Direction[E]
+
+  private final case class Center[E](cons: Cons[E]) extends AnyVal with Direction[E]
+
+  private final case class Right[E](cons: Cons[E]) extends AnyVal with Direction[E]
 
   implicit def setCanBeUsedAsFunction1[E](set: Set[E]): E => Boolean = set.apply
 }
