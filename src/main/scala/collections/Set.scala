@@ -1,7 +1,7 @@
 package collections
 
 sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
-  import Set.{ Center, Cons, Left, Path, Right, empty }
+  import Set.empty
 
   final protected def factory: Factory[Set] = Set
 
@@ -40,67 +40,31 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
   }
 
   final def add[S >: E](input: S): Set[S] = {
-    def path(set: Set[E]): Path[E] = {
-      @scala.annotation.tailrec
-      def loop(set: Set[E], path: Path[E]): Path[E] = set match {
-        case Set.Empty() => path
-        case cons @ Set.Cons(left, element, right) =>
-          if (input == element) path.push(Center(cons))
-          else if (input.hashCode() <= element.hashCode()) loop(left, path.push(Left(cons)))
-          else loop(right, path.push(Right(cons)))
-      }
-
-      loop(set, Stack.empty)
+    @scala.annotation.tailrec
+    def loop(set: Set[E], continuation: Set[S] => Set[S]): Set[S] = set match {
+      case Set.Empty() => continuation(Set.Cons(empty, input, empty))
+      case cons @ Set.Cons(left, element, right) =>
+        if (input == element) continuation(cons)
+        else if (input.hashCode() <= element.hashCode())
+          loop(left, acc => continuation(cons.copy(left = acc)))
+        else loop(right, acc => continuation(cons.copy(right = acc)))
     }
 
-    def rebuild(path: Path[E]): Set[S] = {
-      @scala.annotation.tailrec
-      def loop(path: Path[E], acc: Set[S]): Set[S] = path match {
-        case Stack.Empty => acc
-        case Stack.Cons(direction, otherDirectionsOnTheStack) =>
-          loop(otherDirectionsOnTheStack, direction match {
-            case Left(cons) => cons.copy(left = acc)
-            case Center(cons) => cons
-            case Right(cons) => cons.copy(right = acc)
-          })
-      }
-
-      loop(path, Cons(empty, input, empty))
-    }
-
-    rebuild(path(this))
+    loop(this, identity)
   }
 
   final def remove[S >: E](input: S): Set[S] = {
-    def path(set: Set[E]): Path[E] = {
-      @scala.annotation.tailrec
-      def loop(set: Set[E], path: Path[E]): Path[E] = set match {
-        case Set.Empty() => path
-        case cons @ Set.Cons(left, element, right) =>
-          if (input == element) path.push(Center(cons))
-          else if (input.hashCode() <= element.hashCode()) loop(left, path.push(Left(cons)))
-          else loop(right, path.push(Right(cons)))
-      }
-
-      loop(set, Stack.empty)
+    @scala.annotation.tailrec
+    def loop(set: Set[E], continuation: Set[S] => Set[S]): Set[S] = set match {
+      case Set.Empty() => continuation(empty)
+      case cons @ Set.Cons(left, element, right) =>
+        if (input == element) continuation(left.union(right))
+        else if (input.hashCode() <= element.hashCode())
+          loop(left, acc => continuation(cons.copy(left = acc)))
+        else loop(right, acc => continuation(cons.copy(right = acc)))
     }
 
-    def rebuild(path: Path[E]): Set[S] = {
-      @scala.annotation.tailrec
-      def loop(path: Path[E], acc: Set[S]): Set[S] = path match {
-        case Stack.Empty => acc
-        case Stack.Cons(direction, otherDirectionsOnTheStack) =>
-          loop(otherDirectionsOnTheStack, direction match {
-            case Left(cons) => cons.copy(left = acc)
-            case Center(Set.Cons(left, _, right)) => left.union(right)
-            case Right(cons) => cons.copy(right = acc)
-          })
-      }
-
-      loop(path, empty)
-    }
-
-    rebuild(path(this))
+    loop(this, identity)
   }
 
   final def union[S >: E](that: Set[S]): Set[S] = fold(that)(_ add _)
@@ -185,16 +149,6 @@ object Set extends Factory[Set] {
   }
 
   final def empty: Set[Nothing] = Empty
-
-  private type Path[E] = Stack[Direction[E]]
-
-  private sealed trait Direction[E] extends Any
-
-  private final case class Left[E](cons: Cons[E]) extends AnyVal with Direction[E]
-
-  private final case class Center[E](cons: Cons[E]) extends AnyVal with Direction[E]
-
-  private final case class Right[E](cons: Cons[E]) extends AnyVal with Direction[E]
 
   implicit def setCanBeUsedAsFunction1[E](set: Set[E]): E => Boolean = set.apply
 }
