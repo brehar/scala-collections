@@ -1,5 +1,7 @@
 package collections
 
+import Trampoline.{ done, tailCall }
+
 sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
   import Set.empty
 
@@ -41,16 +43,17 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
 
   final def add[S >: E](input: S): Set[S] = {
     @scala.annotation.tailrec
-    def loop(set: Set[E], continuation: Set[S] => Set[S]): Set[S] = set match {
-      case Set.Empty() => continuation(Set.Cons(empty, input, empty))
-      case cons @ Set.Cons(left, element, right) =>
-        if (input == element) continuation(cons)
-        else if (input.hashCode() <= element.hashCode())
-          loop(left, acc => continuation(cons.copy(left = acc)))
-        else loop(right, acc => continuation(cons.copy(right = acc)))
-    }
+    def loop(set: Set[E], continuation: Set[S] => Trampoline[Set[S]]): Trampoline[Set[S]] =
+      set match {
+        case Set.Empty() => continuation(Set.Cons(empty, input, empty))
+        case cons @ Set.Cons(left, element, right) =>
+          if (input == element) continuation(cons)
+          else if (input.hashCode() <= element.hashCode())
+            loop(left, acc => tailCall(continuation(cons.copy(left = acc))))
+          else loop(right, acc => tailCall(continuation(cons.copy(right = acc))))
+      }
 
-    loop(this, identity)
+    loop(this, done).result
   }
 
   final def remove[S >: E](input: S): Set[S] = {
