@@ -544,11 +544,11 @@ class SetTest extends FunSuite with Matchers {
   test("exists on a non-empty Set should yield true") {
     val element = randomString
 
-    Set(element).exists(_.size == element.size) shouldBe true
-    Set(element).exists(_.size != element.size) shouldBe false
+    Set(element).exists(_.length == element.length) shouldBe true
+    Set(element).exists(_.length != element.length) shouldBe false
 
-    Set(element).doesNotExist(_.size == element.size) shouldBe false
-    Set(element).doesNotExist(_.size != element.size) shouldBe true
+    Set(element).doesNotExist(_.length == element.length) shouldBe false
+    Set(element).doesNotExist(_.length != element.length) shouldBe true
   }
 
   test("exists with variance") {
@@ -578,11 +578,11 @@ class SetTest extends FunSuite with Matchers {
   test("forall on a non-empty Set should yield true") {
     val element = randomString
 
-    Set(element).forall(_.size == element.size) shouldBe true
-    Set(element).forall(_.size != element.size) shouldBe false
+    Set(element).forall(_.length == element.length) shouldBe true
+    Set(element).forall(_.length != element.length) shouldBe false
 
-    Set(element).notForall(_.size == element.size) shouldBe false
-    Set(element).notForall(_.size != element.size) shouldBe true
+    Set(element).notForall(_.length == element.length) shouldBe false
+    Set(element).notForall(_.length != element.length) shouldBe true
   }
 
   test("toString on an empty Set should yield {}") {

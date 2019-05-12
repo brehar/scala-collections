@@ -13,10 +13,10 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
     @scala.annotation.tailrec
     def loop(stack: Stack[Set[E]]): Boolean = stack match {
       case Stack.Empty => false
-      case Stack.Cons(set, otherSetsOnTheStack) =>
+      case Stack.NonEmpty(set, otherSetsOnTheStack) =>
         set match {
           case Set.Empty() => loop(otherSetsOnTheStack)
-          case Set.Cons(left, element, right) =>
+          case Set.NonEmpty(left, element, right) =>
             if (input == element) true
             else if (input.hashCode() <= element.hashCode()) loop(otherSetsOnTheStack.push(left))
             else loop(otherSetsOnTheStack.push(right))
@@ -27,40 +27,37 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
   }
 
   final def fold[R](seed: R)(function: (R, E) => R): R = {
-    @scala.annotation.tailrec
-    def loop(stack: Stack[Set[E]], acc: R): R = stack match {
-      case Stack.Empty => acc
-      case Stack.Cons(set, otherSetsOnTheStack) =>
-        set match {
-          case Set.Empty() => loop(otherSetsOnTheStack, acc)
-          case Set.Cons(left, element, right) =>
-            loop(otherSetsOnTheStack.push(right).push(left), function(acc, element))
-        }
+    def loop(set: Set[E], acc: R): Trampoline[R] = set match {
+      case Set.Empty() => done(acc)
+      case Set.NonEmpty(left, element, right) =>
+        for {
+          currentResult <- done(function(acc, element))
+          rightResult <- tailCall(loop(right, currentResult))
+          leftResult <- tailCall(loop(left, rightResult))
+        } yield leftResult
     }
 
-    loop(Stack.empty.push(this), seed)
+    loop(this, seed).result
   }
 
   final def add[S >: E](input: S): Set[S] = {
-    @scala.annotation.tailrec
-    def loop(set: Set[E], continuation: Set[S] => Trampoline[Set[S]]): Trampoline[Set[S]] =
-      set match {
-        case Set.Empty() => continuation(Set.Cons(empty, input, empty))
-        case cons @ Set.Cons(left, element, right) =>
-          if (input == element) continuation(cons)
-          else if (input.hashCode() <= element.hashCode())
-            loop(left, acc => tailCall(continuation(cons.copy(left = acc))))
-          else loop(right, acc => tailCall(continuation(cons.copy(right = acc))))
-      }
+    def loop(set: Set[E]): Trampoline[Set[S]] = set match {
+      case Set.Empty => done(Set.NonEmpty(empty, input, empty))
+      case cons @ Set.NonEmpty(left, element, right) =>
+        if (input == element) done(cons)
+        else if (input.hashCode() <= element.hashCode())
+          tailCall(loop(left)).map(acc => cons.copy(left = acc))
+        else tailCall(loop(right)).map(acc => cons.copy(right = acc))
+    }
 
-    loop(this, done).result
+    loop(this).result
   }
 
   final def remove[S >: E](input: S): Set[S] = {
     @scala.annotation.tailrec
     def loop(set: Set[E], continuation: Set[S] => Set[S]): Set[S] = set match {
       case Set.Empty() => continuation(empty)
-      case cons @ Set.Cons(left, element, right) =>
+      case cons @ Set.NonEmpty(left, element, right) =>
         if (input == element) continuation(left.union(right))
         else if (input.hashCode() <= element.hashCode())
           loop(left, acc => continuation(cons.copy(left = acc)))
@@ -111,7 +108,7 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
 
     def loop(prefix: String, isLeft: Boolean, isFirst: Boolean, set: Set[E]): String = set match {
       case Set.Empty() => ""
-      case Set.Cons(left, element, right) =>
+      case Set.NonEmpty(left, element, right) =>
         prefix + leftOrRight(isLeft, isFirst) + element + "\n" + loop(
           prefix + leftOrRightParent(isLeft, isFirst),
           isLeft = false,
@@ -128,7 +125,7 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
 }
 
 object Set extends Factory[Set] {
-  private final case class Cons[+E](left: Set[E], element: E, right: Set[E]) extends Set[E] {
+  private final case class NonEmpty[+E](left: Set[E], element: E, right: Set[E]) extends Set[E] {
     def isSingleton: Boolean = left.isEmpty && right.isEmpty
 
     def sample: Option[E] = Some(element)
