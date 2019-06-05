@@ -19,7 +19,7 @@ trait Foldable[+E] {
 
   def forall(predicate: E => Boolean): Boolean = fold(true)(_ && predicate(_))
 
-  final def foreach[R](function: E => R): Unit = fold(()) { (_, current) =>
+  def foreach[R](function: E => R): Unit = fold(()) { (_, current) =>
     function(current)
   }
 }
