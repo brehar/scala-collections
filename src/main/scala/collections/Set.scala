@@ -1,70 +1,43 @@
 package collections
 
-import Trampoline.{ done, tailCall }
-
 sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
-  import Set.empty
+  import Set.{ Empty, NonEmpty, empty }
 
   final protected def factory: Factory[Set] = Set
 
   final def apply[S >: E](input: S): Boolean = contains(input)
 
-  final override def contains[S >: E](input: S): Boolean = {
-    @scala.annotation.tailrec
-    def loop(stack: Stack[Set[E]]): Boolean = stack match {
-      case Stack.Empty => false
-      case Stack.NonEmpty(set, otherSetsOnTheStack) =>
-        set match {
-          case Set.Empty() => loop(otherSetsOnTheStack)
-          case Set.NonEmpty(left, element, right) =>
-            if (input == element) true
-            else if (input.hashCode() <= element.hashCode()) loop(otherSetsOnTheStack.push(left))
-            else loop(otherSetsOnTheStack.push(right))
-        }
-    }
-
-    loop(Stack.empty.push(this))
+  @scala.annotation.tailrec
+  final override def contains[S >: E](input: S): Boolean = this match {
+    case Empty => false
+    case NonEmpty(left, element, right) =>
+      if (input == element) true
+      else if (input.hashCode() <= element.hashCode()) left.contains(input)
+      else right.contains(input)
   }
 
-  final def fold[R](seed: R)(function: (R, E) => R): R = {
-    def loop(set: Set[E], acc: R): Trampoline[R] = set match {
-      case Set.Empty() => done(acc)
-      case Set.NonEmpty(left, element, right) =>
-        for {
-          currentResult <- done(function(acc, element))
-          rightResult <- tailCall(loop(right, currentResult))
-          leftResult <- tailCall(loop(left, rightResult))
-        } yield leftResult
-    }
-
-    loop(this, seed).result
+  final def fold[R](seed: R)(function: (R, E) => R): R = this match {
+    case Empty() => seed
+    case NonEmpty(left, element, right) =>
+      val currentResult = function(seed, element)
+      val rightResult = right.fold(currentResult)(function)
+      left.fold(rightResult)(function)
   }
 
-  final def add[S >: E](input: S): Set[S] = {
-    def loop(set: Set[E]): Trampoline[Set[S]] = set match {
-      case Set.Empty => done(Set.NonEmpty(empty, input, empty))
-      case cons @ Set.NonEmpty(left, element, right) =>
-        if (input == element) done(cons)
-        else if (input.hashCode() <= element.hashCode())
-          tailCall(loop(left)).map(acc => cons.copy(left = acc))
-        else tailCall(loop(right)).map(acc => cons.copy(right = acc))
-    }
-
-    loop(this).result
+  final def add[S >: E](input: S): Set[S] = this match {
+    case Empty => NonEmpty(empty, input, empty)
+    case nonEmpty @ NonEmpty(left, element, right) =>
+      if (input == element) this
+      else if (input.hashCode() <= element.hashCode()) nonEmpty.copy(left = left.add(input))
+      else nonEmpty.copy(right = right.add(input))
   }
 
-  final def remove[S >: E](input: S): Set[S] = {
-    @scala.annotation.tailrec
-    def loop(set: Set[E], continuation: Set[S] => Set[S]): Set[S] = set match {
-      case Set.Empty() => continuation(empty)
-      case cons @ Set.NonEmpty(left, element, right) =>
-        if (input == element) continuation(left.union(right))
-        else if (input.hashCode() <= element.hashCode())
-          loop(left, acc => continuation(cons.copy(left = acc)))
-        else loop(right, acc => continuation(cons.copy(right = acc)))
-    }
-
-    loop(this, identity)
+  final def remove[S >: E](input: S): Set[S] = this match {
+    case Empty => empty
+    case nonEmpty @ NonEmpty(left, element, right) =>
+      if (input == element) left.union(right)
+      else if (input.hashCode() <= element.hashCode()) nonEmpty.copy(left = left.remove(input))
+      else nonEmpty.copy(right = right.remove(input))
   }
 
   final def union[S >: E](that: Set[S]): Set[S] = fold(that)(_ add _)
