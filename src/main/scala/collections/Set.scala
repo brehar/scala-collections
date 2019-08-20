@@ -27,7 +27,7 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
   final def add[S >: E](input: S): Set[S] = this match {
     case Empty => NonEmpty(empty, input, empty)
     case nonEmpty @ NonEmpty(left, element, right) =>
-      if (input == element) this
+      if (input == element) nonEmpty
       else if (input.hashCode() <= element.hashCode()) nonEmpty.copy(left = left.add(input))
       else nonEmpty.copy(right = right.add(input))
   }
@@ -60,13 +60,29 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
 
   final override def hashCode: Int = fold(42)(_ + _.hashCode())
 
+  override def toString: String = this match {
+    case Empty() => "{}"
+    case NonEmpty(left, element, right) =>
+      "{ " + element + splitByCommaSpace(left) + splitByCommaSpace(right) + " }"
+  }
+
+  private[this] def splitByCommaSpace(input: Set[E]): String = input.fold("") { (acc, current) =>
+    s"$acc, $current"
+  }
+
   final def isEmpty: Boolean = this eq empty
 
   final def nonEmpty: Boolean = !isEmpty
 
-  def isSingleton: Boolean
+  final def isSingleton: Boolean = this match {
+    case Empty() => false
+    case NonEmpty(left, _, right) => left.isEmpty && right.isEmpty
+  }
 
-  def sample: Option[E]
+  final def sample: Option[E] = this match {
+    case Empty() => None
+    case NonEmpty(_, element, _) => Some(element)
+  }
 
   final def rendered: String = {
     def leftOrRight(isLeft: Boolean, isFirst: Boolean): String =
@@ -98,30 +114,13 @@ sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
 }
 
 object Set extends Factory[Set] {
-  private final case class NonEmpty[+E](left: Set[E], element: E, right: Set[E]) extends Set[E] {
-    def isSingleton: Boolean = left.isEmpty && right.isEmpty
-
-    def sample: Option[E] = Some(element)
-
-    override def toString: String =
-      "{ " + element + splitByCommaSpace(left) + splitByCommaSpace(right) + " }"
-
-    private[this] def splitByCommaSpace(input: Set[E]): String = input.fold("") { (acc, current) =>
-      s"$acc, $current"
-    }
-  }
+  private final case class NonEmpty[+E](left: Set[E], element: E, right: Set[E]) extends Set[E]
 
   private object Empty extends Set[Nothing] {
     def unapply[E](set: Set[E]): Boolean = set.isInstanceOf[Empty.type]
-
-    final def isSingleton: Boolean = false
-
-    final def sample: Option[Nothing] = None
-
-    final override def toString: String = "{}"
   }
 
-  final def empty: Set[Nothing] = Empty
+  final def nothing: Set[Nothing] = Empty
 
   implicit def setCanBeUsedAsFunction1[E](set: Set[E]): E => Boolean = set.apply
 }

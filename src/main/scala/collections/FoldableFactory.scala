@@ -5,8 +5,6 @@ trait FoldableFactory[+E, A[+L] <: FoldableFactory[L, A]] extends Foldable[E] {
 
   def add[S >: E](input: S): A[S]
 
-  def remove[S >: E](input: S): A[S]
-
   final def filterNot(predicate: E => Boolean): A[E] = filter(!predicate(_))
 
   def filter(predicate: E => Boolean): A[E] = fold[A[E]](factory.empty) { (acc, current) =>
