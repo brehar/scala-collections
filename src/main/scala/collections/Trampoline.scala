@@ -1,7 +1,7 @@
 package collections
 
 sealed abstract class Trampoline[+R] {
-  import Trampoline.{ Done, FlatMap, Thunk, done }
+  import Trampoline._
 
   @scala.annotation.tailrec
   final def result: R = this match {

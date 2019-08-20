@@ -1,126 +1,71 @@
 package collections
 
-sealed abstract class Set[+E] extends FoldableFactory[E, Set] {
-  import Set.{ Empty, NonEmpty, empty }
+final class Set[+E] private (val tree: Tree[E]) extends FoldableFactory[E, Set] {
+  import Set._
 
-  final protected def factory: Factory[Set] = Set
+  protected def factory: Factory[Set] = Set
 
-  final def apply[S >: E](input: S): Boolean = contains(input)
+  def apply[S >: E](input: S): Boolean = contains(input)
 
-  @scala.annotation.tailrec
-  final override def contains[S >: E](input: S): Boolean = this match {
-    case Empty => false
-    case NonEmpty(left, element, right) =>
-      if (input == element) true
-      else if (input.hashCode() <= element.hashCode()) left.contains(input)
-      else right.contains(input)
-  }
+  override def contains[S >: E](input: S): Boolean = tree.contains(input)
 
-  final def fold[R](seed: R)(function: (R, E) => R): R = this match {
-    case Empty() => seed
-    case NonEmpty(left, element, right) =>
-      val currentResult = function(seed, element)
-      val rightResult = right.fold(currentResult)(function)
-      left.fold(rightResult)(function)
-  }
+  def fold[R](seed: R)(function: (R, E) => R): R = tree.fold(seed)(function)
 
-  final def add[S >: E](input: S): Set[S] = this match {
-    case Empty => NonEmpty(empty, input, empty)
-    case nonEmpty @ NonEmpty(left, element, right) =>
-      if (input == element) nonEmpty
-      else if (input.hashCode() <= element.hashCode()) nonEmpty.copy(left = left.add(input))
-      else nonEmpty.copy(right = right.add(input))
-  }
+  def add[S >: E](input: S): Set[S] =
+    if (contains(input)) this
+    else Set(tree add input)
 
-  final def remove[S >: E](input: S): Set[S] = this match {
-    case Empty => empty
-    case nonEmpty @ NonEmpty(left, element, right) =>
-      if (input == element) left.union(right)
-      else if (input.hashCode() <= element.hashCode()) nonEmpty.copy(left = left.remove(input))
-      else nonEmpty.copy(right = right.remove(input))
-  }
+  def remove[S >: E](input: S): Set[S] = Set(tree remove input)
 
-  final def union[S >: E](that: Set[S]): Set[S] = fold(that)(_ add _)
+  def union[S >: E](that: Set[S]): Set[S] = Set(this.tree union that.tree)
 
-  final def intersection[S >: E](that: Set[S]): Set[S] = filter(that)
+  def intersection[S >: E](that: Set[S]): Set[S] = filter(that)
 
-  final def difference(predicate: E => Boolean): Set[E] = fold[Set[E]](empty) { (acc, current) =>
+  def difference(predicate: E => Boolean): Set[E] = fold[Set[E]](empty) { (acc, current) =>
     if (predicate(current)) acc
     else acc.add(current)
   }
 
-  final def isSubsetOf[S >: E](that: Set[S]): Boolean = forall(that)
+  def isSubsetOf[S >: E](that: Set[S]): Boolean = forall(that)
 
-  final def isSupersetOf[S >: E](that: Set[S]): Boolean = that.isSubsetOf(this)
+  def isSupersetOf[S >: E](that: Set[S]): Boolean = that.isSubsetOf(this)
 
-  final override def equals(other: Any): Boolean = other match {
+  override def equals(other: Any): Boolean = other match {
     case that: Set[E] => this.isSubsetOf(that) && that.isSubsetOf(this)
     case _ => false
   }
 
-  final override def hashCode: Int = fold(42)(_ + _.hashCode())
+  override def hashCode: Int = fold(42)(_ + _.hashCode())
 
-  override def toString: String = this match {
-    case Empty() => "{}"
-    case NonEmpty(left, element, right) =>
+  override def toString: String = tree match {
+    case Tree.Empty => "{}"
+    case Tree.NonEmpty(left, element, right) =>
       "{ " + element + splitByCommaSpace(left) + splitByCommaSpace(right) + " }"
   }
 
-  private[this] def splitByCommaSpace(input: Set[E]): String = input.fold("") { (acc, current) =>
+  private[this] def splitByCommaSpace(input: Tree[E]): String = input.fold("") { (acc, current) =>
     s"$acc, $current"
   }
 
-  final def isEmpty: Boolean = this eq empty
+  def isEmpty: Boolean = tree.isEmpty
 
-  final def nonEmpty: Boolean = !isEmpty
+  def nonEmpty: Boolean = !isEmpty
 
-  final def isSingleton: Boolean = this match {
-    case Empty() => false
-    case NonEmpty(left, _, right) => left.isEmpty && right.isEmpty
+  def isSingleton: Boolean = tree match {
+    case Tree.NonEmpty(Tree.Empty, _, Tree.Empty) => true
+    case _ => false
   }
 
-  final def sample: Option[E] = this match {
-    case Empty() => None
-    case NonEmpty(_, element, _) => Some(element)
-  }
-
-  final def rendered: String = {
-    def leftOrRight(isLeft: Boolean, isFirst: Boolean): String =
-      if (isFirst) ""
-      else if (isLeft) "└── "
-      else "├── "
-
-    def leftOrRightParent(isLeft: Boolean, isFirst: Boolean): String =
-      if (isFirst) ""
-      else if (isLeft) "    "
-      else "|   "
-
-    def loop(prefix: String, isLeft: Boolean, isFirst: Boolean, set: Set[E]): String = set match {
-      case Set.Empty() => ""
-      case Set.NonEmpty(left, element, right) =>
-        prefix + leftOrRight(isLeft, isFirst) + element + "\n" + loop(
-          prefix + leftOrRightParent(isLeft, isFirst),
-          isLeft = false,
-          isFirst = false,
-          right) + loop(
-            prefix + leftOrRightParent(isLeft, isFirst),
-            isLeft = true,
-            isFirst = false,
-            left)
-    }
-
-    loop("", isLeft = true, isFirst = true, this)
+  def sample: Option[E] = tree match {
+    case Tree.Empty => None
+    case Tree.NonEmpty(_, element, _) => Some(element)
   }
 }
 
 object Set extends Factory[Set] {
-  private final case class NonEmpty[+E](left: Set[E], element: E, right: Set[E]) extends Set[E]
+  final def nothing: Set[Nothing] = apply(Tree.empty)
 
-  private object Empty extends Set[Nothing] {
-    def unapply[E](set: Set[E]): Boolean = set.isInstanceOf[Empty.type]
-  }
-
-  final def nothing: Set[Nothing] = Empty
+  private def apply[E](tree: Tree[E]): Set[E] = new Set(tree)
 
   implicit def setCanBeUsedAsFunction1[E](set: Set[E]): E => Boolean = set.apply
 }

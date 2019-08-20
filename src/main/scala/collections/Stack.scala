@@ -1,7 +1,7 @@
 package collections
 
 sealed abstract class Stack[+E] {
-  import Stack.{ Empty, NonEmpty, empty }
+  import Stack._
 
   final def push[S >: E](input: S): Stack[S] = NonEmpty(input, this)
 
