@@ -503,10 +503,7 @@ class MapTest extends FunSuite with Matchers {
       first should not be second
       second should not be third
 
-      val map = Map(
-        first -> second,
-        second -> third,
-        third -> first)
+      val map = Map(first -> second, second -> third, third -> first)
       val actual = map.toString
 
       actual.count(_ == '(') shouldBe 1
@@ -520,7 +517,7 @@ class MapTest extends FunSuite with Matchers {
     }
 
   test("toString should not produce any commas with leading spaces") {
-    Map(1 -> 0, 0 -> 1).toString should not include (" ,")
+    Map(1 -> 0, 0 -> 1).toString should not include " ,"
   }
 
   test("map on an empty Map should not apply the function") {
@@ -540,11 +537,11 @@ class MapTest extends FunSuite with Matchers {
 
   test("map should be able to produce a Map of something else other than String") {
     Map("hello" -> "planet").map {
-      case (key, value) => key.size -> value.size
+      case (key, value) => key.length -> value.length
     } shouldBe Map(5 -> 6)
 
     Map("hello" -> "planet", "world" -> "whatever").map {
-      case (key, value) => key.size -> value.size
+      case (key, value) => key.length -> value.length
     } shouldBe Map(5 -> 8)
   }
 
@@ -560,5 +557,103 @@ class MapTest extends FunSuite with Matchers {
     }
 
     result shouldBe Map('a' -> true, 'b' -> true)
+  }
+
+  test("withDefault should return a default value dependent on the key for all keys without values") {
+    def defaultValueOf(key: Int): String = (key + 1).toString
+
+    val map = Map.empty[Int, String].withDefault(defaultValueOf)
+
+    0 to 9 foreach { _ =>
+      val randomKey = randomInt
+
+      map(randomKey) shouldBe Some(defaultValueOf(randomKey))
+    }
+  }
+
+  test("withDefault should not call the function unless necessary") {
+    val key = randomInt
+    val value = randomString
+    val map = Map(key -> value).withDefault(_ => sys.error("should not be thrown"))
+
+    noException should be thrownBy map(key)
+    map(key) shouldBe Some(value)
+  }
+
+  test("withDefaultValue should return a default value for all keys without values") {
+    val defaultValue = "defaultValue"
+    val map = Map.empty[Int, String].withDefaultValue(defaultValue)
+
+    0 to 9 foreach { _ =>
+      map(randomInt) shouldBe Some(defaultValue)
+    }
+  }
+
+  test("withDefaultValue should use a by name parameter for the default") {
+    var calledTimes: Int = 0
+
+    def defaultValue: String = {
+      calledTimes += 1
+
+      "defaultValue"
+    }
+
+    val key = randomInt
+    val value = randomString
+
+    value should not be defaultValue
+
+    val map = Map(key -> value).withDefaultValue(defaultValue)
+
+    map(key) shouldBe Some(value)
+    calledTimes shouldBe 1
+  }
+
+  test("withDefaultValue should override the previous default") {
+    val map = Map.empty[Int, String].withDefaultValue("first").withDefaultValue("second")
+
+    map(randomInt) shouldBe Some("second")
+  }
+
+  test("getOrElseUpdated should use a by-name parameter for the new value") {
+    var called: Boolean = false
+
+    lazy val newValue: String = {
+      called = true
+
+      "newValue"
+    }
+
+    val key = randomInt
+    val value = randomString
+    val map = Map(key -> value)
+
+    map.getOrElseUpdated(key, newValue) shouldBe (value -> map)
+
+    called shouldBe false
+  }
+
+  test("getOrElseUpdated should yield a new Map if the value is not present for the key") {
+    val key = randomInt
+    val newValue = randomString
+
+    Map
+      .empty[Int, String]
+      .withDefaultValue("doesn't matter")
+      .getOrElseUpdated(key, newValue) shouldBe (newValue -> Map(key -> newValue))
+  }
+
+  test("getOrElseUpdated should call the by-name parameter at most once") {
+    var calledTimes: Int = 0
+
+    def newValue: String = {
+      calledTimes += 1
+
+      "newValue"
+    }
+
+    Map.empty[Int, String].getOrElseUpdated(randomInt, newValue)
+
+    calledTimes shouldBe 1
   }
 }

@@ -22,4 +22,12 @@ trait Foldable[+E] {
   def foreach[R](function: E => R): Unit = fold(()) { (_, current) =>
     function(current)
   }
+
+  final def groupBy[K](key: E => K): Map[K, Set[E]] = fold[Map[K, Set[E]]](Map.empty) {
+    (acc, current) =>
+      val k: K = key(current)
+      val value: Set[E] = acc(k).map(_.add(current)).getOrElse(Set(current))
+
+      acc.add(k -> value)
+  }
 }

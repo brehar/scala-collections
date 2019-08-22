@@ -1,11 +1,11 @@
 package collections
 
-final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V])
+final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V], default: Option[K => V])
   extends (K => Option[V])
   with FoldableFactory2[K, V, Map] {
   protected def factory: Factory2[Map] = Map
 
-  def apply(key: K): Option[V] = valueOf(key)
+  def apply(key: K): Option[V] = valueOf(key) orElse default.map(_ apply key)
 
   lazy val values: Set[V] = keys.map(unsafeValueOf)
 
@@ -18,14 +18,14 @@ final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V])
   def add[S >: V](input: (K, S)): Map[K, S] = {
     val (key, value) = input
 
-    Map(keys = keys.add(key), valueOf = {
+    copy(keys = keys.add(key), valueOf = {
       case `key` => Some(value)
       case k => valueOf(k)
     })
   }
 
   def remove(key: K): Map[K, V] =
-    Map(keys = keys.remove(key), valueOf = {
+    copy(keys = keys.remove(key), valueOf = {
       case `key` => None
       case k => valueOf(k)
     })
@@ -63,10 +63,32 @@ final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V])
   def isSingleton: Boolean = keys.isSingleton
 
   def sample: Option[(K, V)] = keys.sample.map(key => key -> unsafeValueOf(key))
+
+  def withDefault[S >: V](default: K => S): Map[K, S] = copy(default = Some(default))
+
+  def withDefaultValue[S >: V](defaultValue: => S): Map[K, S] = withDefault(_ => defaultValue)
+
+  def getOrElseUpdated[S >: V](key: K, newValue: => S): (S, Map[K, S]) =
+    valueOf(key).map(_ -> this).getOrElse {
+      val value = newValue
+      value -> add(key -> value)
+    }
+
+  def mapValues[N](function: V => N): Map[K, N] = map {
+    case (key, value) => key -> function(value)
+  }
+
+  private[this] def copy[S >: V](
+    keys: Set[K] = keys,
+    valueOf: K => Option[S] = valueOf,
+    default: Option[K => S] = default): Map[K, S] = Map(keys, valueOf, default)
 }
 
 object Map extends Factory2[Map] {
-  final def empty[K, V]: Map[K, V] = apply(Set.empty, _ => None)
+  final def empty[K, V]: Map[K, V] = apply(Set.empty, _ => None, None)
 
-  private def apply[K, V](keys: Set[K], valueOf: K => Option[V]): Map[K, V] = new Map(keys, valueOf)
+  private def apply[K, V](
+    keys: Set[K],
+    valueOf: K => Option[V],
+    default: Option[K => V]): Map[K, V] = new Map(keys, valueOf, default)
 }
