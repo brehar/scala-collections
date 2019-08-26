@@ -660,6 +660,29 @@ class SetTest extends FunSuite with Matchers {
 
     peopleWhoAreXYearsOld.mapValues(_.size) shouldBe Map(25 -> 1, 27 -> 3)
   }
+
+  test("withSomeValues on an empty Set should yield an empty Map") {
+    Map.withKeys(Set.empty[Int]).andSomeValues {
+      case 1 => "I"
+      case 2 => "II"
+      case 3 => "III"
+    } shouldBe Map.empty[Int, String]
+  }
+
+  test("withSomeValues should yield a Map with this Set as keys") {
+    val expected = Map(1 -> "I", 3 -> "III")
+
+    Map.withKeys(Set(1, 3)).andSomeValues {
+      case 1 => "I"
+      case 2 => "II"
+      case 3 => "III"
+    } shouldBe expected
+
+    Map.withKeys(Set(1, 2, 3)).andSomeValues {
+      case 1 => "I"
+      case 3 => "III"
+    } shouldBe expected
+  }
 }
 
 object SetTest {

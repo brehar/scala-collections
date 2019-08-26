@@ -78,6 +78,14 @@ final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V], defau
     case (key, value) => key -> function(value)
   }
 
+  def filterKeys(predicate: K => Boolean): Map[K, V] = filter {
+    case (key, _) => predicate(key)
+  }
+
+  def filterValues(predicate: V => Boolean): Map[K, V] = filter {
+    case (_, value) => predicate(value)
+  }
+
   private[this] def copy[S >: V](
     keys: Set[K] = keys,
     valueOf: K => Option[S] = valueOf,
@@ -91,4 +99,27 @@ object Map extends Factory2[Map] {
     keys: Set[K],
     valueOf: K => Option[V],
     default: Option[K => V]): Map[K, V] = new Map(keys, valueOf, default)
+
+  def withKeys[E](keys: Set[E]): Source[E] = new Source(keys)
+
+  final class Source[E](val keys: Set[E]) extends AnyVal {
+    def andSomeValues[V](valueOf: PartialFunction[E, V]): Map[E, V] = andValues(valueOf.lift)
+
+    def andValues[V](valueOf: E => Option[V]): Map[E, V] = keys.fold[Map[E, V]](Map.empty) {
+      (acc, currentKey) =>
+        valueOf(currentKey).map(value => acc.add(currentKey -> value)).getOrElse(acc)
+    }
+  }
+
+  object PotentiallyDangerousImplicits {
+    final implicit class MapExtensions[K, V](val self: Map[K, V]) extends AnyVal {
+      def mapKeys[N](function: K => N): Map[N, V] = self.map {
+        case (key, value) => function(key) -> value
+      }
+
+      def swapped: Map[V, K] = self.map {
+        case (key, value) => value -> key
+      }
+    }
+  }
 }
