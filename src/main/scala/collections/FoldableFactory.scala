@@ -17,8 +17,14 @@ trait FoldableFactory[+E, A[+L] <: FoldableFactory[L, A]] extends Foldable[E] {
 
   def map[R](function: E => R): A[R] = fold[A[R]](factory.empty)(_ add function(_))
 
-  def flatMap[R](function: E => Foldable[R]): A[R] = fold[A[R]](factory.empty) { (acc, current) =>
-    function(current).fold(acc)(_ add _)
+  def flatMap[R, F[_]](function: E => F[R])(implicit view: F[R] => Foldable[R]): A[R] =
+    fold[A[R]](factory.empty) { (acc, current) =>
+      view(function(current)).fold(acc)(_ add _)
+    }
+
+  def flatten[R](implicit view: E => Foldable[R]): A[R] = fold[A[R]](factory.empty) {
+    (acc, current) =>
+      view(current).fold(acc)(_ add _)
   }
 }
 
@@ -36,9 +42,9 @@ object FoldableFactory {
         else acc
       }
 
-    def flatMap[R](function: E => Foldable[R]): A[R] =
+    def flatMap[R, F[_]](function: E => F[R])(implicit view: F[R] => Foldable[R]): A[R] =
       foldableFactory.fold[A[R]](foldableFactory.factory.empty) { (acc, current) =>
-        if (predicate(current)) function(current).fold(acc)(_ add _)
+        if (predicate(current)) view(function(current)).fold(acc)(_ add _)
         else acc
       }
   }

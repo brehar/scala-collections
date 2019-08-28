@@ -519,6 +519,50 @@ class SetTest extends FunSuite with Matchers {
     chessBoard.size shouldBe 64
   }
 
+  test("flatMap") {
+    val characters = Set('a', 'b')
+    val numbers = List(1, 2)
+
+    val partialChessboard: Set[(Char, Int)] = for {
+      c <- characters
+      n <- numbers
+    } yield c -> n
+
+    partialChessboard shouldBe Set('a' -> 1, 'a' -> 2, 'b' -> 1, 'b' -> 2)
+  }
+
+  test("flatMap Map") {
+    val characters = Set('a', 'b')
+    val numbers = Map(1 -> "I", 2 -> "II")
+
+    val partialChessboard: Set[(Char, (Int, String))] = characters.flatMap { c =>
+      numbers.map { n =>
+        c -> n
+      }
+    }
+
+    partialChessboard shouldBe Set('a' -> (2 -> "II"), 'b' -> (2 -> "II"))
+  }
+
+  test("flatten") {
+    Predef
+      .Set[Predef.Set[Int]](
+        Predef.Set[Int](1, 2, 3),
+        Predef.Set[Int](4, 5, 6),
+        Predef.Set[Int](7, 8, 9))
+      .flatten shouldBe Predef.Set[Int](1, 2, 3, 4, 5, 6, 7, 8, 9)
+
+    Set[Set[Int]](Set[Int](1, 2, 3), Set[Int](4, 5, 6), Set[Int](7, 8, 9)).flatten shouldBe Set[Int](1, 2, 3, 4, 5, 6, 7, 8, 9)
+    Set[List[Int]](List[Int](1, 2, 3), List[Int](4, 5, 6), List[Int](7, 8, 9)).flatten shouldBe Set[Int](1, 2, 3, 4, 5, 6, 7, 8, 9)
+    List[Set[Int]](Set[Int](1, 2, 3), Set[Int](4, 5, 6), Set[Int](7, 8, 9)).flatten shouldBe List[Int](1, 2, 3, 4, 5, 6, 7, 8, 9)
+
+    implicit def viewFromIntToFoldable(from: Int): Foldable[Int] = new Foldable[Int] {
+      final def fold[R](seed: R)(function: (R, Int) => R): R = function(seed, from)
+    }
+
+    "Set(1, 2, 3).flatten" should compile
+  }
+
   test("Set should be a function") {
     val orderedClassmates = Seq("alice", "bob", "frank")
 

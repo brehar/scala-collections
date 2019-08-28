@@ -19,9 +19,16 @@ trait FoldableFactory2[K, +V, A[C, +D] <: FoldableFactory2[C, D, A]] extends Fol
   def map[L, R](function: ((K, V)) => (L, R)): A[L, R] =
     fold[A[L, R]](factory.empty)(_ add function(_))
 
-  def flatMap[L, R](function: ((K, V)) => Foldable[(L, R)]): A[L, R] =
+  def flatMap[L, R, F[_]](function: ((K, V)) => F[(L, R)])(
+    implicit
+    view: F[(L, R)] => Foldable[(L, R)]): A[L, R] = fold[A[L, R]](factory.empty) {
+    (acc, current) =>
+      view(function(current)).fold(acc)(_ add _)
+  }
+
+  def flatten[L, R](implicit view: ((K, V)) => Foldable[(L, R)]): A[L, R] =
     fold[A[L, R]](factory.empty) { (acc, current) =>
-      function(current).fold(acc)(_ add _)
+      view(current).fold(acc)(_ add _)
     }
 }
 
@@ -39,9 +46,11 @@ object FoldableFactory2 {
         else acc
       }
 
-    def flatMap[L, R](function: ((K, V)) => Foldable[(L, R)]): A[L, R] =
+    def flatMap[L, R, F[_]](function: ((K, V)) => F[(L, R)])(
+      implicit
+      view: F[(L, R)] => Foldable[(L, R)]): A[L, R] =
       foldableFactory.fold[A[L, R]](foldableFactory.factory.empty) { (acc, current) =>
-        if (predicate(current)) function(current).fold(acc)(_ add _)
+        if (predicate(current)) view(function(current)).fold(acc)(_ add _)
         else acc
       }
   }

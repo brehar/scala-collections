@@ -31,3 +31,15 @@ trait Foldable[+E] {
       acc.add(k -> value)
   }
 }
+
+object Foldable {
+  implicit def viewFromTraversableToFoldableFromCollections[E](from: Traversable[E]): Foldable[E] =
+    new Foldable[E] {
+      final def fold[R](seed: R)(function: (R, E) => R): R = from.foldLeft(seed)(function)
+    }
+
+  implicit def viewFromFoldableToTraversableFromCollections[E](from: Foldable[E]): Traversable[E] =
+    new Traversable[E] {
+      final def foreach[R](function: E => R): Unit = from.foreach(function)
+    }
+}
