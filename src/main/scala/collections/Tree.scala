@@ -56,19 +56,20 @@ sealed abstract class Tree[+E] extends FoldableFactory[E, Tree] {
       else if (isLeft) "    "
       else "|   "
 
-    def loop(prefix: String, isLeft: Boolean, isFirst: Boolean, set: Tree[E]): String = set match {
-      case Tree.Empty => ""
-      case Tree.NonEmpty(left, element, right) =>
-        prefix + leftOrRight(isLeft, isFirst) + element + "\n" + loop(
-          prefix + leftOrRightParent(isLeft, isFirst),
-          isLeft = false,
-          isFirst = false,
-          right) + loop(
+    def loop(prefix: String, isLeft: Boolean, isFirst: Boolean, tree: Tree[E]): String =
+      tree match {
+        case Tree.Empty => ""
+        case Tree.NonEmpty(left, element, right) =>
+          prefix + leftOrRight(isLeft, isFirst) + element + "\n" + loop(
             prefix + leftOrRightParent(isLeft, isFirst),
-            isLeft = true,
+            isLeft = false,
             isFirst = false,
-            left)
-    }
+            right) + loop(
+              prefix + leftOrRightParent(isLeft, isFirst),
+              isLeft = true,
+              isFirst = false,
+              left)
+      }
 
     loop("", isLeft = true, isFirst = true, this)
   }
