@@ -1,8 +1,6 @@
 package collections
 
-import org.scalatest.{ FunSuite, Matchers }
-
-class TreeTest extends FunSuite with Matchers {
+class TreeTest extends TestStyle {
   test("toString") {
     Tree.empty.toString shouldBe "Tree.Empty"
     Tree(1).toString shouldBe "Tree.NonEmpty(Tree.Empty,1,Tree.Empty)"

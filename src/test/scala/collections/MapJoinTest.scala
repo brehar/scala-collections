@@ -1,8 +1,6 @@
 package collections
 
-import org.scalatest.{ FunSuite, Matchers }
-
-class MapJoinTest extends FunSuite with Matchers {
+class MapJoinTest extends TestStyle {
   import MapJoin.DSL
   import MapJoinTest._
 

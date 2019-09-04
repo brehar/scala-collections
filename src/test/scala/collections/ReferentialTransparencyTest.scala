@@ -1,8 +1,6 @@
 package collections
 
-import org.scalatest.{ FunSuite, Matchers }
-
-class ReferentialTransparencyTest extends FunSuite with Matchers {
+class ReferentialTransparencyTest extends TestStyle {
   test("Sets are referentially transparent") {
     val someValue = "HULK SMASH!!!"
     val setBeforeDb = Set(1, 2, 3)

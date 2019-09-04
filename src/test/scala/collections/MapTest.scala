@@ -1,8 +1,6 @@
 package collections
 
-import org.scalatest.{ FunSuite, Matchers }
-
-class MapTest extends FunSuite with Matchers {
+class MapTest extends TestStyle {
   test("apply on an empty Map should yield None") {
     Map.empty(randomString) shouldBe None
     Map.empty.keys.size shouldBe 0
