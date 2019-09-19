@@ -9,7 +9,9 @@ final class Set[+E] private (val tree: Tree[E]) extends FoldableFactory[E, Set] 
 
   override def contains[S >: E](input: S): Boolean = tree.contains(input)
 
-  def fold[R](seed: R)(function: (R, E) => R): R = tree.fold(seed)(function)
+  def foldLeft[R](seed: R)(function: (R, E) => R): R = tree.foldLeft(seed)(function)
+
+  def foldRight[R](seed: => R)(function: (E, => R) => R): R = tree.foldRight(seed)(function)
 
   def add[S >: E](input: S): Set[S] =
     if (contains(input)) this
@@ -21,7 +23,7 @@ final class Set[+E] private (val tree: Tree[E]) extends FoldableFactory[E, Set] 
 
   def intersection[S >: E](that: Set[S]): Set[S] = filter(that)
 
-  def difference(predicate: E => Boolean): Set[E] = fold[Set[E]](empty) { (acc, current) =>
+  def difference(predicate: E => Boolean): Set[E] = foldLeft[Set[E]](empty) { (acc, current) =>
     if (predicate(current)) acc
     else acc.add(current)
   }
@@ -35,16 +37,14 @@ final class Set[+E] private (val tree: Tree[E]) extends FoldableFactory[E, Set] 
     case _ => false
   }
 
-  override def hashCode: Int = fold(42)(_ + _.hashCode())
+  override def hashCode: Int = foldLeft(42)(_ + _.hashCode())
 
-  override def toString: String = tree match {
-    case Tree.Empty => "{}"
+  override def toString: String = s"Set($toStringContent)"
+
+  private[this] def toStringContent: String = tree match {
+    case Tree.Empty => ""
     case Tree.NonEmpty(left, element, right) =>
-      "{ " + element + splitByCommaSpace(left) + splitByCommaSpace(right) + " }"
-  }
-
-  private[this] def splitByCommaSpace(input: Tree[E]): String = input.fold("") { (acc, current) =>
-    s"$acc, $current"
+      s"$element${left.splitByCommaSpace}${right.splitByCommaSpace}"
   }
 
   def isEmpty: Boolean = tree.isEmpty

@@ -11,8 +11,14 @@ final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V], defau
 
   private[this] def unsafeValueOf(key: K): V = valueOf(key).get
 
-  def fold[R](seed: R)(function: (R, (K, V)) => R): R = keys.fold(seed) { (acc, currentKey) =>
-    function(acc, currentKey -> unsafeValueOf(currentKey))
+  def foldLeft[R](seed: R)(function: (R, (K, V)) => R): R = keys.foldLeft(seed) {
+    (acc, currentKey) =>
+      function(acc, currentKey -> unsafeValueOf(currentKey))
+  }
+
+  override def foldRight[R](seed: => R)(function: ((K, V), => R) => R): R = keys.foldRight(seed) {
+    (currentKey, acc) =>
+      function(currentKey -> unsafeValueOf(currentKey), acc)
   }
 
   def add[S >: V](input: (K, S)): Map[K, S] = {
@@ -41,20 +47,19 @@ final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V], defau
     case _ => false
   }
 
-  override def hashCode: Int = fold(42)(_ + _.hashCode())
+  override def hashCode: Int = foldLeft(42)(_ + _.hashCode())
 
-  override def toString: String = keys.tree match {
-    case Tree.Empty => "Map()"
+  override def toString: String = s"Map($toStringContent)"
+
+  private[this] def toStringContent: String = keys.tree match {
+    case Tree.Empty => ""
     case Tree.NonEmpty(left, key, right) =>
-      "Map(" + unsafeRendered(key) + splitByCommaSpace(left) + splitByCommaSpace(right) + ")"
+      unsafeRendered(key) + left.map(unsafeRendered).splitByCommaSpace + right
+        .map(unsafeRendered)
+        .splitByCommaSpace
   }
 
   private[this] def unsafeRendered(key: K): String = s"$key -> ${unsafeValueOf(key)}"
-
-  private[this] def splitByCommaSpace(input: Tree[K]): String = input.fold("") {
-    (acc, currentKey) =>
-      s"$acc, ${unsafeRendered(currentKey)}"
-  }
 
   def isEmpty: Boolean = keys.isEmpty
 
@@ -105,7 +110,7 @@ object Map extends Factory2[Map] {
   final class Source[E](val keys: Set[E]) extends AnyVal {
     def andSomeValues[V](valueOf: PartialFunction[E, V]): Map[E, V] = andValues(valueOf.lift)
 
-    def andValues[V](valueOf: E => Option[V]): Map[E, V] = keys.fold[Map[E, V]](Map.empty) {
+    def andValues[V](valueOf: E => Option[V]): Map[E, V] = keys.foldLeft[Map[E, V]](Map.empty) {
       (acc, currentKey) =>
         valueOf(currentKey).map(value => acc.add(currentKey -> value)).getOrElse(acc)
     }

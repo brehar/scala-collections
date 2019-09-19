@@ -101,7 +101,7 @@ class SetTest extends TestStyle {
   }
 
   test("remove should remove elements from both sides of the tree") {
-    def run(ordered: List[Int]): Unit = {
+    def run(ordered: scala.List[Int]): Unit = {
       import ordered._
 
       val allExceptLast = ordered.dropRight(1)
@@ -109,7 +109,7 @@ class SetTest extends TestStyle {
       Set(head, tail: _*).remove(last) shouldBe Set(head, allExceptLast: _*)
     }
 
-    forAll { numbers: List[Int] =>
+    forAll { numbers: scala.List[Int] =>
       val orderedAsc = numbers.distinct.sorted
       val orderedDsc = orderedAsc.reverse
 
@@ -571,8 +571,6 @@ class SetTest extends TestStyle {
 
       Set(Set(a, b), Set(c, d)).flatten shouldBe Set(a, b, c, d)
       Set(List(a, b), List(c, d)).flatten shouldBe Set(a, b, c, d)
-      List(Set(a, b), Set(c, d)).flatten shouldBe List(a, b, c, d)
-      List(List(a, b), List(c, d)).flatten shouldBe List(a, b, c, d)
     }
   }
 
@@ -644,17 +642,17 @@ class SetTest extends TestStyle {
     Set(element).notForall(_.length != element.length) shouldBe true
   }
 
-  test("toString on an empty Set should yield {}") {
-    Set.empty.toString shouldBe "{}"
+  test("toString on an empty Set should yield Set()") {
+    Set.empty.toString shouldBe "Set()"
   }
 
-  test("toString on a Set with one element should yield {element}") {
+  test("toString on a Set with one element should yield Set(element)") {
     val element = randomString
 
-    Set(element).toString shouldBe s"{ $element }"
+    Set(element).toString shouldBe s"Set($element)"
   }
 
-  test("toString on a Set with two elements should yield {elementOne, elementTwo}") {
+  test("toString on a Set with two elements should yield Set(elementOne, elementTwo)") {
     val first = randomString
     val second = randomString
 
@@ -662,14 +660,14 @@ class SetTest extends TestStyle {
 
     val actual = Set(first, second).toString
 
-    actual.count(_ == '{') shouldBe 1
+    actual.count(_ == '(') shouldBe 1
     actual should include(first)
     actual.count(_ == ',') shouldBe 1
     actual should include(second)
-    actual.count(_ == '}') shouldBe 1
+    actual.count(_ == ')') shouldBe 1
   }
 
-  test("toString on a Set with three elements should yield {elementOne, elementTwo, elementThree}") {
+  test("toString on a Set with three elements should yield Set(elementOne, elementTwo, elementThree)") {
     val first = randomString
     val second = randomString
     val third = randomString
@@ -679,12 +677,12 @@ class SetTest extends TestStyle {
 
     val actual = Set(first, second, third).toString
 
-    actual.count(_ == '{') shouldBe 1
+    actual.count(_ == '(') shouldBe 1
     actual should include(first)
     actual.count(_ == ',') shouldBe 2
     actual should include(second)
     actual should include(third)
-    actual.count(_ == '}') shouldBe 1
+    actual.count(_ == ')') shouldBe 1
   }
 
   test("toString should not produce any commas with leading spaces") {

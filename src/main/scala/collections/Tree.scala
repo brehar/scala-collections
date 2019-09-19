@@ -14,12 +14,20 @@ sealed abstract class Tree[+E] extends FoldableFactory[E, Tree] {
       else right.contains(input)
   }
 
-  final def fold[R](seed: R)(function: (R, E) => R): R = this match {
+  final def foldLeft[R](seed: R)(function: (R, E) => R): R = this match {
     case Empty => seed
     case NonEmpty(left, element, right) =>
       val currentResult = function(seed, element)
-      val rightResult = right.fold(currentResult)(function)
-      left.fold(rightResult)(function)
+      val rightResult = right.foldLeft(currentResult)(function)
+      left.foldLeft(rightResult)(function)
+  }
+
+  final def foldRight[R](seed: => R)(function: (E, => R) => R): R = this match {
+    case Empty => seed
+    case NonEmpty(left, element, right) =>
+      lazy val leftResult = left.foldRight(seed)(function)
+      lazy val rightResult = right.foldRight(leftResult)(function)
+      function(element, rightResult)
   }
 
   final def add[S >: E](input: S): Tree[S] = this match {
@@ -37,9 +45,9 @@ sealed abstract class Tree[+E] extends FoldableFactory[E, Tree] {
       else nonEmpty.copy(right = right.remove(input))
   }
 
-  final def union[S >: E](that: Tree[S]): Tree[S] = fold(that)(_ add _)
+  final def union[S >: E](that: Tree[S]): Tree[S] = foldLeft(that)(_ add _)
 
-  final override def hashCode: Int = fold(42)(_ + _.hashCode())
+  final override def hashCode: Int = foldLeft(42)(_ + _.hashCode())
 
   final def isEmpty: Boolean = this eq empty
 

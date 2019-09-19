@@ -7,7 +7,7 @@ object MapJoin {
     class Join[Y, Z, T](self: Map[Y, Z], that: Map[Y, T]) {
       def inner: Map[Y, (Z, T)] = inner(t2)
 
-      def inner[X](factory: (Z, T) => X): Map[Y, X] = self.fold[Map[Y, X]](Map.empty) {
+      def inner[X](factory: (Z, T) => X): Map[Y, X] = self.foldLeft[Map[Y, X]](Map.empty) {
         case (acc, (thisKey, thisValue)) =>
           that(thisKey)
             .map { thatValue =>
@@ -18,13 +18,13 @@ object MapJoin {
 
       def leftOuter: Map[Y, (Z, Option[T])] = leftOuter(t2)
 
-      def leftOuter[X](factory: (Z, Option[T]) => X): Map[Y, X] = self.fold[Map[Y, X]](Map.empty) {
+      def leftOuter[X](factory: (Z, Option[T]) => X): Map[Y, X] = self.foldLeft[Map[Y, X]](Map.empty) {
         case (acc, (thisKey, thisValue)) => acc.add(thisKey -> factory(thisValue, that(thisKey)))
       }
 
       def leftOnly: Map[Y, (Z, Option[T])] = leftOnly(t2)
 
-      def leftOnly[X](factory: (Z, Option[T]) => X): Map[Y, X] = self.fold[Map[Y, X]](Map.empty) {
+      def leftOnly[X](factory: (Z, Option[T]) => X): Map[Y, X] = self.foldLeft[Map[Y, X]](Map.empty) {
         case (acc, (thisKey, thisValue)) =>
           if (that(thisKey).nonEmpty) acc
           else acc.add(thisKey -> factory(thisValue, None))
@@ -32,7 +32,7 @@ object MapJoin {
 
       def rightOuter: Map[Y, (Option[Z], T)] = rightOuter(t2)
 
-      def rightOuter[X](factory: (Option[Z], T) => X): Map[Y, X] = that.fold[Map[Y, X]](Map.empty) {
+      def rightOuter[X](factory: (Option[Z], T) => X): Map[Y, X] = that.foldLeft[Map[Y, X]](Map.empty) {
         case (acc, (thatKey, thatValue)) =>
           self(thatKey)
             .map { thisValue =>
@@ -45,7 +45,7 @@ object MapJoin {
 
       def rightOnly: Map[Y, (Option[Z], T)] = rightOnly(t2)
 
-      def rightOnly[X](factory: (Option[Z], T) => X): Map[Y, X] = that.fold[Map[Y, X]](Map.empty) {
+      def rightOnly[X](factory: (Option[Z], T) => X): Map[Y, X] = that.foldLeft[Map[Y, X]](Map.empty) {
         case (acc, (thatKey, thatValue)) =>
           self(thatKey).map(_ => acc).getOrElse {
             acc.add(thatKey -> factory(None, thatValue))
@@ -55,7 +55,7 @@ object MapJoin {
       def fullOuter: Map[Y, (Option[Z], Option[T])] = fullOuter(t2)
 
       def fullOuter[X](factory: (Option[Z], Option[T]) => X): Map[Y, X] = {
-        val left = self.fold[Map[Y, X]](Map.empty) {
+        val left = self.foldLeft[Map[Y, X]](Map.empty) {
           case (acc, (thisKey, thisValue)) =>
             that(thisKey)
               .map { thatValue =>
@@ -66,7 +66,7 @@ object MapJoin {
               }
         }
 
-        that.fold[Map[Y, X]](left) {
+        that.foldLeft[Map[Y, X]](left) {
           case (acc, (thatKey, thatValue)) =>
             self(thatKey).map(_ => acc).getOrElse {
               acc.add(thatKey -> factory(None, Some(thatValue)))
@@ -77,14 +77,14 @@ object MapJoin {
       def outer: Map[Y, (Option[Z], Option[T])] = outer(t2)
 
       def outer[X](factory: (Option[Z], Option[T]) => X): Map[Y, X] = {
-        val left = self.fold[Map[Y, X]](Map.empty) {
+        val left = self.foldLeft[Map[Y, X]](Map.empty) {
           case (acc, (thisKey, thisValue)) =>
             that(thisKey).map(_ => acc).getOrElse {
               acc.add(thisKey -> factory(Some(thisValue), None))
             }
         }
 
-        that.fold[Map[Y, X]](left) {
+        that.foldLeft[Map[Y, X]](left) {
           case (acc, (thatKey, thatValue)) =>
             self(thatKey).map(_ => acc).getOrElse {
               acc.add(thatKey -> factory(None, Some(thatValue)))
