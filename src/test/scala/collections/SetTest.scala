@@ -1,5 +1,7 @@
 package collections
 
+import mathlib.Semigroup
+
 class SetTest extends TestStyle {
   import SetTest._
 
@@ -737,6 +739,11 @@ class SetTest extends TestStyle {
       case 1 => "I"
       case 3 => "III"
     } shouldBe expected
+  }
+
+  test("Group Theory") {
+    val setOfIntUnion: Semigroup[Set[Int]] = Semigroup[Set[Int]]
+    val setOfStringUnion: Semigroup[Set[String]] = Set.Union[String]
   }
 }
 

@@ -1,9 +1,14 @@
 package collections
 
+import mathlib.Monoid
+
 trait Foldable[+E] {
   def foldLeft[R](seed: R)(function: (R, E) => R): R
 
   def foldRight[R](seed: => R)(function: (E, => R) => R): R
+
+  @inline def aggregated[S >: E: Monoid]: S =
+    foldLeft(Monoid[S].uniqueIdentityElement)(Monoid[S].operation)
 
   def size: Int = foldLeft(0) { (acc, _) =>
     acc + 1
@@ -19,7 +24,7 @@ trait Foldable[+E] {
 
   final def notForall(predicate: E => Boolean): Boolean = !forall(predicate)
 
-  def forall(predicate: E => Boolean): Boolean = foldLeft(true)(_ && predicate(_))
+  def forall(predicate: E => Boolean): Boolean = foldRight(true)(predicate(_) && _)
 
   def foreach[R](function: E => R): Unit = foldLeft(()) { (_, current) =>
     function(current)

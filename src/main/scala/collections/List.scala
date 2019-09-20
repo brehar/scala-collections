@@ -1,5 +1,7 @@
 package collections
 
+import mathlib.{ Arbitrary, ClosedBinaryOperation, Gen, Monoid }
+
 sealed abstract class List[+E] extends FoldableFactory[E, List] {
   import List._
 
@@ -54,4 +56,22 @@ object List extends Factory[List] {
   final case object Nil extends List[Nothing]
 
   def nothing: List[Nothing] = Nil
+
+  implicit def arbitrary[T: Arbitrary]: Arbitrary[List[T]] = Arbitrary(gen[T])
+
+  def gen[T: Arbitrary]: Gen[List[T]] = Gen.listOf(Arbitrary.arbitrary[T]).map {
+    case scala.Nil => empty[T]
+    case head :: tail => List(head, tail: _*)
+  }
+
+  def genNonEmpty[T: Arbitrary]: Gen[List[T]] = Gen.nonEmptyListOf(Arbitrary.arbitrary[T]).map {
+    case scala.Nil => sys.error("should never happen")
+    case head :: tail => List(head, tail: _*)
+  }
+
+  implicit def Concatenation[A: Arbitrary]: Monoid[List[A]] = new Monoid[List[A]] {
+    final lazy val uniqueIdentityElement: List[A] = empty[A]
+    final lazy val operation: ClosedBinaryOperation[List[A]] = _ ::: _
+    final protected lazy val arbitrary: Arbitrary[List[A]] = implicitly[Arbitrary[List[A]]]
+  }
 }

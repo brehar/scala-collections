@@ -1,5 +1,7 @@
 package collections
 
+import mathlib.{ IntAddition, IntMultiplication, Semigroup }
+
 class ListTest extends TestStyle {
   test(
     "Calling the varargs apply method on the List companion object should yield a List with all the arguments as elements, which are appropriately ordered") {
@@ -92,5 +94,31 @@ class ListTest extends TestStyle {
       List(Set(a, b), Set(c, d)).flatten shouldBe List(a, b, c, d)
       List(List(a, b), List(c, d)).flatten shouldBe List(a, b, c, d)
     }
+  }
+
+  test("Group Theory") {
+    val listOfIntConcatenation: Semigroup[List[Int]] = Semigroup[List[Int]]
+    val listOfStringConcatenation: Semigroup[List[String]] = List.Concatenation[String]
+  }
+
+  test("fold should be able to express aggregation") {
+    forAll { (a: Int, b: Int, c: Int) =>
+      List(a, b, c).foldLeft(0)(_ + _) shouldBe a + b + c
+      List(a, b, c).foldRight(0)(_ + _) shouldBe a + b + c
+    }
+
+    forAll { (a: String, b: String, c: String) =>
+      List(a, b, c).foldLeft("")(_ + _) shouldBe a + b + c
+      List(a, b, c).foldRight("")(_ + _) shouldBe a + b + c
+    }
+
+    forAll { (a: List[Int], b: List[Int], c: List[Int]) =>
+      List(a, b, c).foldLeft(List.empty[Int])(_ ::: _) shouldBe a ::: b ::: c
+      List(a, b, c).foldRight(List.empty[Int])(_ ::: _) shouldBe a ::: b ::: c
+    }
+
+    List(2, 4).aggregated shouldBe 6
+    List(2, 4).aggregated(IntAddition) shouldBe 6
+    List(2, 4).aggregated(IntMultiplication) shouldBe 8
   }
 }

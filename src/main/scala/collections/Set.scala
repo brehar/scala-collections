@@ -1,5 +1,7 @@
 package collections
 
+import mathlib.{ Arbitrary, ClosedBinaryOperation, Gen, Monoid }
+
 final class Set[+E] private (val tree: Tree[E]) extends FoldableFactory[E, Set] {
   import Set._
 
@@ -68,4 +70,22 @@ object Set extends Factory[Set] {
   private def apply[E](tree: Tree[E]): Set[E] = new Set(tree)
 
   implicit def setCanBeUsedAsFunction1[E](set: Set[E]): E => Boolean = set.apply
+
+  implicit def arbitrary[T: Arbitrary]: Arbitrary[Set[T]] = Arbitrary(gen[T])
+
+  def gen[T: Arbitrary]: Gen[Set[T]] = Gen.listOf(Arbitrary.arbitrary[T]).map {
+    case Nil => empty[T]
+    case head :: tail => Set(head, tail: _*)
+  }
+
+  def genNonEmpty[T: Arbitrary]: Gen[Set[T]] = Gen.nonEmptyListOf(Arbitrary.arbitrary[T]).map {
+    case Nil => sys.error("should never happen")
+    case head :: tail => Set(head, tail: _*)
+  }
+
+  implicit def Union[A: Arbitrary]: Monoid[Set[A]] = new Monoid[Set[A]] {
+    final lazy val uniqueIdentityElement: Set[A] = empty[A]
+    final lazy val operation: ClosedBinaryOperation[Set[A]] = _ union _
+    final protected lazy val arbitrary: Arbitrary[Set[A]] = implicitly[Arbitrary[Set[A]]]
+  }
 }
