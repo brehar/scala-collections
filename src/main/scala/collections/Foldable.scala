@@ -61,6 +61,7 @@ object Foldable {
 
   implicit def viewFromFoldableToTraversableFromCollections[E](from: Foldable[E]): Traversable[E] =
     new Traversable[E] {
-      final def foreach[R](function: E => R): Unit = from.foreach(function)
+      final override def foreach[R](function: E => R): Unit = from.foreach(function)
+      final override def iterator: Iterator[E] = ???
     }
 }
