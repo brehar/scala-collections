@@ -1,6 +1,6 @@
 package stdlib
 
-import scala.collection.Map
+import scala.collection.immutable.Map
 
 object StandardLibraryMapJoin {
   final implicit class DSL[K, V](private val self: Map[K, V]) {
