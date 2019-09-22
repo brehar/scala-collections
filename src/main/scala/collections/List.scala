@@ -2,10 +2,24 @@ package collections
 
 import mathlib.{ Arbitrary, ClosedBinaryOperation, Gen, Monoid }
 
-sealed abstract class List[+E] extends FoldableFactory[E, List] {
+sealed abstract class List[+E] extends FoldableFactory[E, List] with (Int => Option[E]) {
   import List._
 
   final protected def factory: Factory[List] = List
+
+  final def apply(index: Int): Option[E] = {
+    @scala.annotation.tailrec
+    def loop(list: List[E], count: Int): Option[E] =
+      if (index < 0) None
+      else if (count == index) list.head
+      else loop(list.tail, count + 1)
+
+    loop(this, 0)
+  }
+
+  final def isEmpty: Boolean = this.isInstanceOf[Nil.type]
+
+  final def nonEmpty: Boolean = !isEmpty
 
   @scala.annotation.tailrec
   final def foldLeft[R](seed: R)(function: (R, E) => R): R = this match {
@@ -35,6 +49,18 @@ sealed abstract class List[+E] extends FoldableFactory[E, List] {
     case Cons(element, otherElements) => Some(element) -> otherElements
   }
 
+  final def take(amount: Int): List[E] = {
+    @scala.annotation.tailrec
+    def loop(list: List[E], acc: List[E], count: Int): List[E] = list match {
+      case Nil => acc
+      case Cons(element, otherElements) =>
+        if (count >= amount) acc
+        else loop(otherElements, element :: acc, count + 1)
+    }
+
+    loop(this, empty, 0).reversed
+  }
+
   final def reversed: List[E] = foldLeft[List[E]](empty) { (acc, current) =>
     current :: acc
   }
@@ -44,6 +70,21 @@ sealed abstract class List[+E] extends FoldableFactory[E, List] {
   private[this] def toStringContent: String = this match {
     case Nil => ""
     case Cons(element, otherElements) => s"$element${otherElements.splitByCommaSpace}"
+  }
+
+  final def zip[T](that: List[T]): List[(E, T)] = this match {
+    case Nil => Nil
+    case Cons(element, otherElements) =>
+      that match {
+        case Nil => Nil
+        case Cons(thatElement, thatOtherElements) =>
+          (element -> thatElement) :: (otherElements zip thatOtherElements)
+      }
+  }
+
+  final def interleave[S >: E](that: List[S]): List[S] = this match {
+    case Nil => that
+    case Cons(element, otherElements) => element :: that.interleave(otherElements)
   }
 }
 

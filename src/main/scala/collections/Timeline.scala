@@ -1,7 +1,19 @@
 package collections
 
-sealed abstract class Timeline[+E] {
+import org.scalacheck.{ Arbitrary, Gen }
+
+sealed abstract class Timeline[+E] extends (Int => Option[E]) {
   import Timeline._
+
+  final def apply(index: Int): Option[E] = {
+    @scala.annotation.tailrec
+    def loop(timeline: Timeline[E], count: Int): Option[E] =
+      if (index < 0) None
+      else if (count == index) timeline.head
+      else loop(timeline.tail, count + 1)
+
+    loop(this, 0)
+  }
 
   final def head: Option[E] = this match {
     case End => None
@@ -13,6 +25,18 @@ sealed abstract class Timeline[+E] {
     case NonEmpty(_, followingEvents) => followingEvents.unsafeRun()
   }
 
+  final def isEmpty: Boolean = this.isInstanceOf[End.type]
+
+  final def nonEmpty: Boolean = !isEmpty
+
+  @scala.annotation.tailrec
+  final def foldLeft[R](seed: R)(function: (R, => E) => R): R = this match {
+    case End => seed
+    case NonEmpty(recentEvent, followingEvents) =>
+      val currentResult = function(seed, recentEvent.unsafeRun())
+      followingEvents.unsafeRun().foldLeft(currentResult)(function)
+  }
+
   final def foldRight[R](seed: => R)(function: (=> E, => R) => R): R = this match {
     case End => seed
     case NonEmpty(recentEvent, followingEvents) =>
@@ -20,12 +44,12 @@ sealed abstract class Timeline[+E] {
       function(recentEvent.unsafeRun(), followingResult)
   }
 
-  @scala.annotation.tailrec
-  final def foreach[R](function: E => R): Unit = this match {
-    case End =>
-    case NonEmpty(recentEvent, followingEvents) =>
-      function(recentEvent.unsafeRun())
-      followingEvents.unsafeRun().foreach(function)
+  final def size: Int = foldLeft(0) { (acc, _) =>
+    acc + 1
+  }
+
+  final def foreach[R](function: E => R): Unit = foldLeft(()) { (_, current) =>
+    function(current)
   }
 
   final def map[R](function: E => R): Timeline[R] = foldRight[Timeline[R]](End)(function(_) #:: _)
@@ -34,6 +58,11 @@ sealed abstract class Timeline[+E] {
     (current, acc) =>
       function(current).foldRight(acc)(_ #:: _)
   }
+
+  final def flatten[R](implicit view: (=> E) => Timeline[R]): Timeline[R] =
+    foldRight[Timeline[R]](End) { (current, acc) =>
+      view(current).foldRight(acc)(_ #:: _)
+    }
 
   final def take(amount: Int): Timeline[E] = {
     @scala.annotation.tailrec
@@ -47,15 +76,28 @@ sealed abstract class Timeline[+E] {
     loop(this, End, 0).reversed
   }
 
-  final def reversed: Timeline[E] = {
-    @scala.annotation.tailrec
-    def loop(timeline: Timeline[E], acc: Timeline[E]): Timeline[E] = timeline match {
-      case End => acc
-      case NonEmpty(recentEvent, followingEvents) =>
-        loop(followingEvents.unsafeRun(), recentEvent.unsafeRun() #:: acc)
-    }
+  final def reversed: Timeline[E] = foldLeft[Timeline[E]](End) { (acc, current) =>
+    current #:: acc
+  }
 
-    loop(this, End)
+  final override def equals(other: Any): Boolean = other match {
+    case that: Timeline[E] =>
+      if (this.isEmpty && that.isEmpty) true
+      else if (this.isEmpty || that.isEmpty) false
+      else {
+        val NonEmpty(n1Head, n1Tail) = this
+        val NonEmpty(n2Head, n2Tail) = that
+        n1Head.unsafeRun() == n2Head.unsafeRun() && n1Tail.unsafeRun() == n2Tail.unsafeRun()
+      }
+    case _ => false
+  }
+
+  final override def toString: String = s"Timeline($toStringContent)"
+
+  private[this] def toStringContent: String = this match {
+    case End => ""
+    case NonEmpty(recentEvent, _) =>
+      s"${recentEvent.unsafeRun()}, ${Console.GREEN}...${Console.RESET}"
   }
 
   final def zip[T](that: Timeline[T]): Timeline[(E, T)] = this match {
@@ -64,9 +106,8 @@ sealed abstract class Timeline[+E] {
       that match {
         case End => End
         case NonEmpty(thatRecentEvent, thatFollowingEvents) =>
-          lazy val head = recentEvent.unsafeRun() -> thatRecentEvent.unsafeRun()
-          lazy val tail = followingEvents.unsafeRun() zip thatFollowingEvents.unsafeRun()
-          head #:: tail
+          (recentEvent.unsafeRun() -> thatRecentEvent.unsafeRun()) #:: (followingEvents
+            .unsafeRun() zip thatFollowingEvents.unsafeRun())
       }
   }
 
@@ -80,8 +121,15 @@ sealed abstract class Timeline[+E] {
 }
 
 object Timeline {
-  final case class NonEmpty[+E](recentEvent: IO[E], followingEvents: IO[Timeline[E]])
+  implicit def force[A](a: => A): A = a
+
+  final case class NonEmpty[+E] private (recentEvent: IO[E], followingEvents: IO[Timeline[E]])
     extends Timeline[E]
+
+  object NonEmpty {
+    def apply[E](recentEvent: IO[E], followingEvents: IO[Timeline[E]]): Timeline[E] =
+      new NonEmpty[E](recentEvent.memoized, followingEvents.memoized)
+  }
 
   case object End extends Timeline[Nothing]
 
@@ -165,4 +213,19 @@ object Timeline {
     followingEvents: IO[E]*): Timeline[E] =
     first #:: apply(second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth) #::: followingEvents
       .foldRight[Timeline[E]](End)(_.unsafeRun() #:: _)
+
+  implicit def arbitrary[T](implicit arbitrary: Arbitrary[IO[T]]): Arbitrary[Timeline[T]] =
+    Arbitrary(gen[T])
+
+  def gen[T](implicit arbitrary: Arbitrary[IO[T]]): Gen[Timeline[T]] =
+    Gen.containerOf[LazyList, IO[T]](arbitrary.arbitrary).map { lazyList =>
+      if (lazyList.isEmpty) End
+      else Timeline(lazyList.head.unsafeRun(), lazyList.tail: _*)
+    }
+
+  def genNonEmpty[T](implicit arbitrary: Arbitrary[IO[T]]): Gen[Timeline[T]] =
+    Gen.nonEmptyContainerOf[LazyList, IO[T]](arbitrary.arbitrary).map { lazyList =>
+      if (lazyList.isEmpty) sys.error("should not happen")
+      else Timeline(lazyList.head.unsafeRun(), lazyList.tail: _*)
+    }
 }
