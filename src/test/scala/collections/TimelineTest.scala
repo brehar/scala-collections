@@ -18,7 +18,8 @@ sealed abstract class TimelineTest extends TestStyle {
       eventsOccurred shouldBe expected
     }
 
-    def eventsOccurredShouldNotBe(expected: Int): Unit = eventsOccurredShouldNotBe(expected, expected)
+    def eventsOccurredShouldNotBe(expected: Int): Unit =
+      eventsOccurredShouldNotBe(expected, expected)
 
     def eventsOccurredShouldNotBe(whenMemoized: Int, whenNotMemoized: Int): Unit = {
       val expected: Int =
@@ -320,7 +321,8 @@ sealed abstract class TimelineTest extends TestStyle {
 
     new Environment {
       val a: Timeline[Int] = Timeline(sideEffect(0))
-      val b: Timeline[Int] = Timeline(sideEffect(10), sideEffect(11), sideEffect(12), sideEffect(13))
+      val b: Timeline[Int] =
+        Timeline(sideEffect(10), sideEffect(11), sideEffect(12), sideEffect(13))
       val timeline: Timeline[Int] = a interleave b
       eventsOccurredShouldBe(0)
       timeline shouldBe Timeline(0, 10, 11, 12, 13)
@@ -333,6 +335,37 @@ sealed abstract class TimelineTest extends TestStyle {
         val outer: Timeline[Timeline[Int]] = Timeline(inner, inner, inner)
         outer.flatten shouldBe outer.flatMap(e => e)
       }
+    }
+  }
+
+  test("filter") {
+    new Environment {
+      def ascending(seed: Int): Timeline[Int] = sideEffect(seed) #:: ascending(seed + 1)
+
+      val ints: Timeline[Int] = ascending(0)
+      val filtered: Timeline[Int] = ints.filter(_ % 2 == 0).take(5)
+      eventsOccurredShouldBe(0)
+      filtered.forced shouldBe List(0, 2, 4, 6, 8)
+    }
+  }
+
+  test("takeWhile") {
+    new Environment {
+      val timeline: Timeline[Int] = Timeline(
+        sideEffect(1),
+        sideEffect(2),
+        sideEffect(3),
+        sideEffect(4),
+        sideEffect(5),
+        sideEffect(6))
+      val t1: Timeline[Int] = timeline.takeWhile(_ % 2 != 0)
+      val t2: Timeline[Int] = timeline.takeWhile(_ < 3)
+      val t3: Timeline[Int] = timeline.takeWhile(_ <= 3)
+
+      eventsOccurredShouldBe(0)
+      t1.forced shouldBe List(1)
+      t2.forced shouldBe List(1, 2)
+      t3.forced shouldBe List(1, 2, 3)
     }
   }
 }
