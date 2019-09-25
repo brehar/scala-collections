@@ -22,19 +22,33 @@ sealed abstract class List[+E] extends FoldableFactory[E, List] with (Int => Opt
   final def nonEmpty: Boolean = !isEmpty
 
   @scala.annotation.tailrec
-  final def foldLeft[R](seed: R)(function: (R, E) => R): R = this match {
+  final def foldLeft[R](seed: R)(function: (R, => E) => R): R = this match {
     case Nil => seed
     case Cons(element, otherElements) =>
       val currentResult = function(seed, element)
       otherElements.foldLeft(currentResult)(function)
   }
 
-  final override def foldRight[R](seed: => R)(function: (E, => R) => R): R = this match {
+  final def reduceLeft[R >: E](function: (R, => E) => R): Option[R] = head.map { seed =>
+    tail.foldLeft[R](seed)(function)
+  }
+
+  final def reduceLeftOrThrowException[R >: E](function: (R, => E) => R): R =
+    reduceLeft(function).get
+
+  final override def foldRight[R](seed: => R)(function: (=> E, => R) => R): R = this match {
     case Nil => seed
     case Cons(element, otherElements) =>
       lazy val otherResult = otherElements.foldRight(seed)(function)
       function(element, otherResult)
   }
+
+  final def reduceRight[R >: E](function: (=> E, => R) => R): Option[R] = head.map { seed =>
+    tail.foldRight[R](seed)(function)
+  }
+
+  final def reduceRightOrThrowException[R >: E](function: (=> E, => R) => R): R =
+    reduceRight(function).get
 
   final def :::[S >: E](that: List[S]): List[S] = that.foldRight[List[S]](this)(_ :: _)
 
@@ -91,6 +105,10 @@ sealed abstract class List[+E] extends FoldableFactory[E, List] with (Int => Opt
 object List extends Factory[List] {
   final override def apply[E](element: E, otherElements: E*): List[E] =
     element :: otherElements.foldRight[List[E]](empty)(_ :: _)
+
+  final def unapplySeq[E](list: List[E]): Option[Seq[E]] =
+    if (list == null) None
+    else Some(list.foldRight[scala.List[E]](scala.List.empty)(_ :: _))
 
   final case class Cons[+E](element: E, otherElements: List[E]) extends List[E]
 

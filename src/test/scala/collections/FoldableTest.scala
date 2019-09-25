@@ -8,6 +8,6 @@ class FoldableTest extends TestStyle {
 }
 
 case class Cell(input: Int) extends Foldable[Int] {
-  final def foldLeft[R](seed: R)(function: (R, Int) => R): R = function(seed, input)
-  final def foldRight[R](seed: => R)(function: (Int, => R) => R): R = function(input, seed)
+  final def foldLeft[R](seed: R)(function: (R, => Int) => R): R = function(seed, input)
+  final def foldRight[R](seed: => R)(function: (=> Int, => R) => R): R = function(input, seed)
 }

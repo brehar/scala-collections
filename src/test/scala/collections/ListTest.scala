@@ -154,4 +154,10 @@ class ListTest extends TestStyle {
     List(0) interleave List(10, 11, 12, 13) shouldBe List(0, 10, 11, 12, 13)
     List(0, 1, 2, 3) interleave List(10, 11, 12, 13) shouldBe List(0, 10, 1, 11, 2, 12, 3, 13)
   }
+
+  test("unapplySeq") {
+    List(0, 1, 2) should matchPattern {
+      case List(0, 1, 2) =>
+    }
+  }
 }

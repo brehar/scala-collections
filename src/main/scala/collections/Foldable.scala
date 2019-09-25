@@ -3,12 +3,14 @@ package collections
 import mathlib.Monoid
 
 trait Foldable[+E] {
-  def foldLeft[R](seed: R)(function: (R, E) => R): R
+  def foldLeft[R](seed: R)(function: (R, => E) => R): R
 
-  def foldRight[R](seed: => R)(function: (E, => R) => R): R
+  def foldRight[R](seed: => R)(function: (=> E, => R) => R): R
 
-  @inline def aggregated[S >: E: Monoid]: S =
-    foldLeft(Monoid[S].uniqueIdentityElement)(Monoid[S].operation)
+  @inline def aggregated[S >: E: Monoid]: S = foldLeft(Monoid[S].uniqueIdentityElement) {
+    (acc, current) =>
+      Monoid[S].operation(acc, current)
+  }
 
   def size: Int = foldLeft(0) { (acc, _) =>
     acc + 1
@@ -51,9 +53,12 @@ trait Foldable[+E] {
 object Foldable {
   implicit def viewFromIterableToFoldableFromCollections[E](from: Iterable[E]): Foldable[E] =
     new Foldable[E] {
-      final def foldLeft[R](seed: R)(function: (R, E) => R): R = from.foldLeft(seed)(function)
+      final def foldLeft[R](seed: R)(function: (R, => E) => R): R = from.foldLeft(seed) {
+        (acc, current) =>
+          function(acc, current)
+      }
 
-      final def foldRight[R](seed: => R)(function: (E, => R) => R): R = from.foldRight(seed) {
+      final def foldRight[R](seed: => R)(function: (=> E, => R) => R): R = from.foldRight(seed) {
         (current, acc) =>
           function(current, acc)
       }

@@ -11,15 +11,15 @@ final class Map[K, +V] private (val keys: Set[K], valueOf: K => Option[V], defau
 
   private[this] def unsafeValueOf(key: K): V = valueOf(key).get
 
-  def foldLeft[R](seed: R)(function: (R, (K, V)) => R): R = keys.foldLeft(seed) {
+  def foldLeft[R](seed: R)(function: (R, => (K, V)) => R): R = keys.foldLeft(seed) {
     (acc, currentKey) =>
       function(acc, currentKey -> unsafeValueOf(currentKey))
   }
 
-  override def foldRight[R](seed: => R)(function: ((K, V), => R) => R): R = keys.foldRight(seed) {
-    (currentKey, acc) =>
+  override def foldRight[R](seed: => R)(function: (=> (K, V), => R) => R): R =
+    keys.foldRight(seed) { (currentKey, acc) =>
       function(currentKey -> unsafeValueOf(currentKey), acc)
-  }
+    }
 
   def add[S >: V](input: (K, S)): Map[K, S] = {
     val (key, value) = input

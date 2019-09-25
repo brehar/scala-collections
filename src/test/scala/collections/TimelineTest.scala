@@ -1,5 +1,6 @@
 package collections
 
+import mathlib.BooleanAddition
 import org.scalacheck.{ Arbitrary, Gen }
 
 sealed abstract class TimelineTest extends TestStyle {
@@ -366,6 +367,108 @@ sealed abstract class TimelineTest extends TestStyle {
       t1.forced shouldBe List(1)
       t2.forced shouldBe List(1, 2)
       t3.forced shouldBe List(1, 2, 3)
+    }
+  }
+
+  test("find") {
+    new Environment {
+      val timeline: Timeline[Int] = Timeline(1, 2, 3, 4, 5, 6)
+      timeline.find(_ % 2 != 0) shouldBe Some(1)
+      timeline.find(_ % 2 == 0) shouldBe Some(2)
+      timeline.find(_ < 3) shouldBe Some(1)
+      timeline.find(_ <= 3) shouldBe Some(1)
+      timeline.find(_ >= 7) shouldBe None
+    }
+  }
+
+  test("aggregated") {
+    new Environment {
+      def ascending(seed: Int): Timeline[Int] = sideEffect(seed) #:: ascending(seed + 1)
+
+      val ints: Timeline[Int] = ascending(0)
+      val zeroOneTwoThree: Timeline[Int] = ints.take(4)
+
+      eventsOccurredShouldBe(0)
+      zeroOneTwoThree.aggregated shouldBe 6
+    }
+
+    new Environment {
+      def ascending(seed: Int): Timeline[Int] = sideEffect(seed) #:: ascending(seed + 1)
+
+      val ints: Timeline[Int] = ascending(0)
+      val threeFourFiveSix: Timeline[Int] = ints.filter(_ >= 3).take(4)
+      val sevenEightNine: Timeline[Int] = ints.filter(_ >= 7).take(3)
+      eventsOccurredShouldBe(0)
+
+      val timeline: Timeline[Timeline[Int]] =
+        Timeline(sideEffect(zeroOneTwo), sideEffect(threeFourFiveSix), sideEffect(sevenEightNine))
+      eventsOccurredShouldBe(0)
+
+      val flattened: Timeline[Int] = timeline.aggregated
+      flattened.forced shouldBe List(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+      timeline.flatten.forced shouldBe List(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    }
+  }
+
+  test("reduce") {
+    new Environment {
+      lazy val a: Boolean = sideEffect(true)
+      lazy val b: Boolean = sideEffect(false)
+      lazy val c: Boolean = sideEffect(false)
+
+      a || b || c shouldBe true
+      eventsOccurredShouldBe(1)
+    }
+
+    new Environment {
+      lazy val a: Boolean = sideEffect(true)
+      lazy val b: Boolean = sideEffect(false)
+      lazy val c: Boolean = sideEffect(false)
+
+      val timeline: Timeline[Boolean] = Timeline(a, b, c)
+      timeline.foldLeft(false)(_ || _) shouldBe true
+      eventsOccurredShouldBe(1)
+
+      timeline.aggregated(BooleanAddition) shouldBe true
+      timeline.reduceLeft(_ || _) shouldBe Some(true)
+      timeline.reduceLeftOrThrowException(_ || _) shouldBe true
+    }
+
+    new Environment {
+      lazy val a: Boolean = sideEffect(true)
+      lazy val b: Boolean = sideEffect(false)
+      lazy val c: Boolean = sideEffect(false)
+
+      val list: List[Boolean] = List(a, b, c)
+      list.foldLeft(false)(_ || _) shouldBe true
+      list.aggregated(BooleanAddition) shouldBe true
+
+      list.reduceLeft(_ || _) shouldBe Some(true)
+      list.reduceLeftOrThrowException(_ || _) shouldBe true
+    }
+  }
+
+  test("unapply") {
+    new Environment {
+      zeroOneTwo should matchPattern {
+        case Timeline.NonEmpty(recentEvent, followingEvents) if recentEvent.unsafeRun() == 0 && followingEvents.unsafeRun().head.contains(1) =>
+      }
+    }
+
+    new Environment {
+      zeroOneTwo should matchPattern {
+        case Timeline.NonEmpty(_, _) =>
+      }
+
+      eventsOccurredShouldBe(0)
+    }
+
+    new Environment {
+      zeroOneTwo should matchPattern {
+        case Timeline(0, 1, 2) =>
+      }
+
+      eventsOccurredShouldBe(3)
     }
   }
 }

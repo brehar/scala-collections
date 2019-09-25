@@ -14,7 +14,7 @@ sealed abstract class Tree[+E] extends FoldableFactory[E, Tree] {
       else right.contains(input)
   }
 
-  final def foldLeft[R](seed: R)(function: (R, E) => R): R = this match {
+  final def foldLeft[R](seed: R)(function: (R, => E) => R): R = this match {
     case Empty => seed
     case NonEmpty(left, element, right) =>
       val currentResult = function(seed, element)
@@ -22,7 +22,7 @@ sealed abstract class Tree[+E] extends FoldableFactory[E, Tree] {
       left.foldLeft(rightResult)(function)
   }
 
-  final def foldRight[R](seed: => R)(function: (E, => R) => R): R = this match {
+  final def foldRight[R](seed: => R)(function: (=> E, => R) => R): R = this match {
     case Empty => seed
     case NonEmpty(left, element, right) =>
       lazy val leftResult = left.foldRight(seed)(function)

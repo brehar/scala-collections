@@ -1,9 +1,11 @@
 package collections
 
+import mathlib.{ ClosedBinaryOperation, Monoid }
 import org.scalacheck.{ Arbitrary, Gen }
 
 final class Timeline[+E] private (private val data: IO[Timeline.Data[E]])
-  extends (Int => Option[E]) {
+  extends Foldable[E]
+  with (Int => Option[E]) {
   def apply(index: Int): Option[E] = data.unsafeRun().apply(index)
 
   def head: Option[E] = data.unsafeRun().head
@@ -16,16 +18,25 @@ final class Timeline[+E] private (private val data: IO[Timeline.Data[E]])
 
   def foldLeft[R](seed: R)(function: (R, => E) => R): R = data.unsafeRun().foldLeft(seed)(function)
 
+  def reduceLeft[R >: E](function: (R, => E) => R): Option[R] = head.map { seed =>
+    tail.foldLeft[R](seed)(function)
+  }
+
+  def reduceLeftOrThrowException[R >: E](function: (R, => E) => R): R = reduceLeft(function).get
+
   def foldRight[R](seed: => R)(function: (=> E, => R) => R): R =
     data.unsafeRun().foldRight(seed)(function)
 
-  def size: Int = data.unsafeRun().size
+  def reduceRight[R >: E](function: (=> E, => R) => R): Option[R] = head.map { seed =>
+    tail.foldRight[R](seed)(function)
+  }
+
+  def reduceRightOrThrowException[R >: E](function: (=> E, => R) => R): R =
+    reduceRight(function).get
 
   def take(amount: Int): Timeline[E] = Timeline(data.map(_.take(amount)))
 
   def reversed: Timeline[E] = Timeline(data.map(_.reversed))
-
-  def foreach[R](function: E => R): Unit = data.unsafeRun().foreach(function)
 
   def filter(predicate: E => Boolean): Timeline[E] = Timeline(data.map(_.filter(predicate)))
 
@@ -35,11 +46,10 @@ final class Timeline[+E] private (private val data: IO[Timeline.Data[E]])
 
   def map[R](function: E => R): Timeline[R] = Timeline(data.map(_.map(function)))
 
-  def flatMap[R](function: (=> E) => Timeline[R]): Timeline[R] =
-    Timeline(data.map(_.flatMap(e => function(e).data.unsafeRun())))
+  def flatMap[R](function: (=> E) => Foldable[R]): Timeline[R] =
+    Timeline(data.map(_.flatMap(function)))
 
-  def flatten[R](implicit view: (=> E) => Timeline[R]): Timeline[R] =
-    Timeline(data.map(_.flatMap(e => view(e).data.unsafeRun())))
+  def flatten[R](implicit view: (=> E) => Foldable[R]): Timeline[R] = Timeline(data.map(_.flatten))
 
   override def equals(other: Any): Boolean = other match {
     case that: Timeline[E] => this.data.unsafeRun() == that.data.unsafeRun()
@@ -81,7 +91,13 @@ object Timeline {
       }
   }
 
+  final def unapplySeq[E](timeline: Timeline[E]): Option[Seq[E]] =
+    if (timeline == null) None
+    else Some(timeline.foldRight[LazyList[E]](LazyList.empty)(_ #:: _))
+
   final val End: Timeline[Nothing] = Timeline(IO.pure(Data.End))
+
+  final def end[E]: Timeline[E] = End
 
   final implicit class TimelineOps[E](timeline: => Timeline[E]) {
     def #::[S >: E](input: => S): Timeline[S] = NonEmpty(IO.pure(input), IO.pure(timeline))
@@ -195,7 +211,15 @@ object Timeline {
       else Timeline(lazyList.head.unsafeRun(), lazyList.tail: _*)
     }
 
-  private sealed abstract class Data[+E] extends (Int => Option[E]) {
+  implicit def Concatenation[A](implicit arb: Arbitrary[IO[A]]): Monoid[Timeline[A]] =
+    new Monoid[Timeline[A]] {
+      final lazy val uniqueIdentityElement: Timeline[A] = end[A]
+      final lazy val operation: ClosedBinaryOperation[Timeline[A]] = _ #::: _
+      final protected lazy val arbitrary: Arbitrary[Timeline[A]] =
+        implicitly[Arbitrary[Timeline[A]]]
+    }
+
+  private sealed abstract class Data[+E] extends Foldable[E] with (Int => Option[E]) {
     final def apply(index: Int): Option[E] = {
       @scala.annotation.tailrec
       def loop(data: Data[E], count: Int): Option[E] =
@@ -235,17 +259,17 @@ object Timeline {
         function(recentEvent.unsafeRun(), followingResult)
     }
 
-    final def size: Int = foldLeft(0) { (acc, _) =>
-      acc + 1
-    }
-
     final def take(amount: Int): Data[E] = {
       @scala.annotation.tailrec
       def loop(data: Data[E], acc: Data[E], count: Int): Data[E] = data match {
         case Data.End => acc
         case Data.NonEmpty(recentEvent, followingEvents) =>
+          lazy val nextCount = count + 1
+          lazy val nextAcc = recentEvent.unsafeRun() #:: acc
+
           if (count >= amount) acc
-          else loop(followingEvents.unsafeRun(), recentEvent.unsafeRun() #:: acc, count + 1)
+          else if (nextCount == amount) nextAcc
+          else loop(followingEvents.unsafeRun(), nextAcc, nextCount)
       }
 
       loop(this, Data.End, 0).reversed
@@ -253,10 +277,6 @@ object Timeline {
 
     final def reversed: Data[E] = foldLeft[Data[E]](Data.End) { (acc, current) =>
       current #:: acc
-    }
-
-    final def foreach[R](function: E => R): Unit = foldLeft(()) { (_, current) =>
-      function(current)
     }
 
     final def filter(predicate: E => Boolean): Data[E] = foldRight[Data[E]](Data.End) {
@@ -275,12 +295,12 @@ object Timeline {
 
     final def map[R](function: E => R): Data[R] = foldRight[Data[R]](Data.End)(function(_) #:: _)
 
-    final def flatMap[R](function: (=> E) => Data[R]): Data[R] = foldRight[Data[R]](Data.End) {
+    final def flatMap[R](function: (=> E) => Foldable[R]): Data[R] = foldRight[Data[R]](Data.End) {
       (current, acc) =>
         function(current).foldRight(acc)(_ #:: _)
     }
 
-    final def flatten[R](implicit view: (=> E) => Data[R]): Data[R] =
+    final def flatten[R](implicit view: (=> E) => Foldable[R]): Data[R] =
       foldRight[Data[R]](Data.End) { (current, acc) =>
         view(current).foldRight(acc)(_ #:: _)
       }

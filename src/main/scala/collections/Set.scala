@@ -11,9 +11,9 @@ final class Set[+E] private (val tree: Tree[E]) extends FoldableFactory[E, Set] 
 
   override def contains[S >: E](input: S): Boolean = tree.contains(input)
 
-  def foldLeft[R](seed: R)(function: (R, E) => R): R = tree.foldLeft(seed)(function)
+  def foldLeft[R](seed: R)(function: (R, => E) => R): R = tree.foldLeft(seed)(function)
 
-  def foldRight[R](seed: => R)(function: (E, => R) => R): R = tree.foldRight(seed)(function)
+  def foldRight[R](seed: => R)(function: (=> E, => R) => R): R = tree.foldRight(seed)(function)
 
   def add[S >: E](input: S): Set[S] =
     if (contains(input)) this
